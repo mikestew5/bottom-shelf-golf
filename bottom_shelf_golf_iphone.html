@@ -56,8 +56,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            padding-top: 20px;
+            justify-content: center;
+            gap: 20px;
             z-index: 1000;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
@@ -79,9 +79,9 @@
         .hole-select-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            gap: 12px;
             max-width: 340px;
-            padding: 0 12px;
+            padding: 0 12px 60px;
             justify-items: center;
         }
 
@@ -137,15 +137,15 @@
         .mode-select {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 12px;
+            gap: 14px;
+            margin-bottom: 0;
             justify-content: center;
         }
 
         .mode-btn {
             font-family: 'Playfair Display', serif;
-            font-size: 16px;
-            padding: 10px 24px;
+            font-size: 22px;
+            padding: 16px 40px;
             border: 2px solid #FFD700;
             border-radius: 10px;
             background: rgba(20, 20, 20, 0.8);
@@ -177,7 +177,7 @@
 
         .name-entry-label {
             font-family: 'Playfair Display', serif;
-            font-size: 18px;
+            font-size: 22px;
             color: #FFD700;
         }
 
@@ -344,13 +344,13 @@
         #pauseBtn { left: 3px; top: 50%; transform: translateY(-50%); font-size: 8px; }
 
         #ipodPowerBtn {
-            width: 16px; height: 16px;
+            width: 28px; height: 28px;
             background: #cc0000;
             border: 2px solid #990000;
             border-radius: 50%;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            font-size: 8px; color: #fff;
+            font-size: 14px; color: #fff;
             animation: powerPulse 2s ease-in-out infinite;
             transition: background 0.2s, border-color 0.2s;
             flex-shrink: 0;
@@ -371,10 +371,11 @@
 
         #ipodModeLabel {
             text-align: center;
-            font-size: 6px;
+            font-size: 8px;
             color: #666;
             font-family: 'Cormorant Garamond', serif;
             letter-spacing: 0.3px;
+            font-weight: 700;
         }
 
         /* ==================== GOLF COURSE ==================== */
@@ -456,7 +457,7 @@
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            padding: 3px 8px;
+            padding: 6px 8px;
             margin-bottom: 2px;
             background: rgba(20, 20, 20, 0.9);
             border: 1px solid #FFD700;
@@ -469,18 +470,23 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 0;
-            font-size: 10px;
+            font-size: 14px;
             gap: 3px;
+            transform: scaleY(1.4);
+            transform-origin: center;
+            line-height: 1;
         }
 
         .score-label {
             color: #888;
             text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         .score-value {
             color: #FFD700;
-            font-weight: bold;
+            font-weight: 900;
         }
 
         /* ==================== COMPLETION MESSAGE ==================== */
@@ -687,7 +693,7 @@
         <div class="start-title">
             <!--🏌️ WOBBLY PUTT-PUTT 🏌️-->
         </div>
-        <img src="bsgheader.png" alt="wobbly PUTT-PUTT" style="max-width: 200px; max-height: 120px; object-fit: contain; margin-bottom: 10px;">
+        <img src="bsgheader.png" alt="Bottom Shelf Golf" style="max-width: 300px; width: 80vw; object-fit: contain;">
 
         <!-- Mode Selection -->
         <div id="modeSelect" class="mode-select">
@@ -697,33 +703,33 @@
 
         <!-- Play Sub-Mode Selection -->
         <div id="playModeSelect" style="display:none; text-align:center;">
-            <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 18px; color: #FFD700; margin-bottom: 12px;">
+            <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 22px; color: #FFD700; margin-bottom: 16px;">
                 SELECT MODE
             </div>
             <div class="mode-select">
-                <button class="mode-btn mode-btn-play" id="soloPlayBtn" style="font-size: 14px;">SOLO CHALLENGE</button>
-                <button class="mode-btn" id="multiplayerBtn" style="font-size: 14px;">MULTIPLAYER</button>
+                <button class="mode-btn mode-btn-play" id="soloPlayBtn">SOLO CHALLENGE</button>
+                <button class="mode-btn" id="multiplayerBtn">MULTIPLAYER</button>
             </div>
-            <button class="mode-btn" id="playModeBackBtn" style="font-size: 12px; padding: 5px 14px; margin-top: 8px;">BACK</button>
+            <button class="mode-btn" id="playModeBackBtn" style="font-size: 16px; padding: 10px 24px; margin-top: 12px;">BACK</button>
         </div>
 
         <!-- Player Name Entry (main menu, optional) -->
-        <div id="mainNameEntry" style="margin-top: 12px; text-align: center;">
-            <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 13px; color: #FFD700; margin-bottom: 6px;">
+        <div id="mainNameEntry" style="text-align: center;">
+            <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 18px; color: #FFD700; margin-bottom: 10px;">
                 ENTER NAME (OPTIONAL)
             </div>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <input type="text" id="mainNameInput" class="name-input" maxlength="4" placeholder="NAME"
-                    autocomplete="off" style="width: 100px; font-size: 20px; padding: 5px;">
-                <button class="mode-btn" id="mainNameSubmit" style="font-size: 14px; padding: 6px 14px;">OK</button>
+                    autocomplete="off" style="width: 140px; font-size: 24px; padding: 10px;">
+                <button class="mode-btn" id="mainNameSubmit" style="font-size: 18px; padding: 10px 20px;">OK</button>
             </div>
         </div>
 
         <!-- Player Info + Pro Shop (shown after name entered) -->
-        <div id="playerInfo" style="display: none; margin-top: 12px; text-align: center;">
-            <div id="playerWelcome" style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 15px; color: #FFD700;"></div>
-            <div id="coinDisplay" style="font-family: 'Cormorant Garamond', serif; font-size: 13px; color: #FFD700; margin: 4px 0;"></div>
-            <button class="mode-btn mode-btn-play" id="proShopBtn" style="font-size: 14px; padding: 8px 20px;">PRO SHOP</button>
+        <div id="playerInfo" style="display: none; text-align: center;">
+            <div id="playerWelcome" style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 20px; color: #FFD700;"></div>
+            <div id="coinDisplay" style="font-family: 'Cormorant Garamond', serif; font-size: 16px; color: #FFD700; margin: 6px 0;"></div>
+            <button class="mode-btn mode-btn-play" id="proShopBtn" style="font-size: 18px; padding: 12px 28px;">PRO SHOP</button>
         </div>
 
         <!-- Name Entry (play mode) -->
@@ -743,7 +749,8 @@
             <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 22px; color: #FFD700; margin-bottom: 4px;">PRO SHOP</div>
             <div id="shopCoinDisplay" style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 13px; color: #FFD700; margin-bottom: 10px;"></div>
             <div class="hole-select-grid" id="shopGrid"></div>
-            <button class="mode-btn" id="shopBackBtn" style="margin-top: 12px; font-size: 14px; padding: 6px 18px;">BACK</button>
+            <button class="mode-btn" id="shopBackBtn" style="margin-top: 16px; font-size: 18px; padding: 10px 28px;">BACK</button>
+            <div style="height: 60px;"></div>
         </div>
     </div>
 
@@ -820,13 +827,6 @@
                 <span class="score-label">To Par:</span>
                 <span class="score-value" id="scoreToParValue">E</span>
             </div>
-            <div class="score-row" id="coinBalanceRow" style="display:none; align-items: center;">
-                <span style="display: flex; align-items: center; gap: 3px;">
-                    <canvas id="coinIcon" width="14" height="14" style="width:14px;height:14px;"></canvas>
-                    <span class="score-label">COINS</span>
-                </span>
-                <span class="score-value" id="coinBalanceValue">0</span>
-            </div>
             <button id="resetHoleBtn" style="
                 padding: 3px 8px;
                 background: rgba(255, 50, 50, 0.8);
@@ -842,20 +842,33 @@
             ">Reset</button>
         </div>
 
-        <!-- Wind controls (practice mode) -->
+        <!-- Wind bar: coins (left) | wind flag (center) | wind buttons (right, practice only) -->
         <div id="windControls" style="
             display: none;
-            text-align: center;
-            padding: 2px 0;
+            width: 345px;
+            padding: 2px 4px;
         ">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                <canvas id="windFlagCanvas" width="50" height="35" style="width:50px;height:35px;"></canvas>
-                <div id="windLabel" style="
-                    font-family: 'Cormorant Garamond', serif;
-                    font-size: 11px;
-                    color: #ccc;
-                ">0 mph</div>
-                <div style="display: flex; gap: 2px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <!-- BS Coins (left) -->
+                <div id="coinBalanceRow" style="display:none; align-items: center; gap: 3px; min-width: 60px;">
+                    <canvas id="coinIcon" width="14" height="14" style="width:14px;height:14px;"></canvas>
+                    <span style="font-family:'Cormorant Garamond',serif; font-size:11px; color:#888; font-weight:600;">COINS</span>
+                    <span style="font-family:'Cormorant Garamond',serif; font-size:11px; color:#FFD700; font-weight:900;" id="coinBalanceValue">0</span>
+                </div>
+                <div id="coinSpacer" style="min-width:60px;"></div>
+
+                <!-- Wind flag + label (center) -->
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <canvas id="windFlagCanvas" width="50" height="35" style="width:50px;height:35px;"></canvas>
+                    <div id="windLabel" style="
+                        font-family: 'Cormorant Garamond', serif;
+                        font-size: 11px;
+                        color: #ccc;
+                    ">0 mph</div>
+                </div>
+
+                <!-- Wind change buttons (right, practice only) -->
+                <div id="windButtons" style="display: flex; gap: 2px; min-width: 60px; justify-content: flex-end;">
                     <button class="wind-btn" data-wind="-1" style="
                         padding: 2px 4px; font-size: 9px; cursor: pointer;
                         background: rgba(255,255,255,0.8); border: 1px solid #999; border-radius: 3px;
@@ -925,6 +938,7 @@
                 <div class="completion-title" id="completionTitle">HOLE IN ONE!</div>
                 <div class="completion-strokes" id="completionStrokes">1 stroke</div>
                 <div class="completion-score-to-par" id="completionScoreToPar">Score to Par: E</div>
+                <div id="completionSummary" style="display:none; font-family: sans-serif; font-size: 14px; color: #ccc; margin-bottom: 10px; text-align: left; padding: 6px 10px; background: rgba(255,255,255,0.08); border-radius: 6px;"></div>
                 <div id="completionCoins" style="display:none; font-family: 'Playfair Display', serif; font-style: italic; font-size: 18px; color: #FFD700; margin-bottom: 12px;">
                     <canvas id="completionCoinIcon" width="20" height="20" style="width:20px;height:20px;vertical-align:middle;margin-right:4px;"></canvas>
                     <span id="completionCoinsText"></span>
@@ -1075,11 +1089,15 @@
 
         // Shot summary & stats
         let shotSummaryMessages = [];
-        let shotSummaryVisible = false;
         let shotBeersUsed = 0;
         let shotCigsUsed = 0;
         let displayBeers = 0;
         let displayCigs = 0;
+
+        // Hole-level accumulators for completion screen
+        let holeSummaryMessages = [];
+        let holeBeersTotal = 0;
+        let holeCigsTotal = 0;
         let frozenStatSpeed = 0;      // mph
         let frozenStatDistance = 0;    // feet (updated live)
         let frozenStatAirTime = 0;    // seconds
@@ -1090,7 +1108,7 @@
         // Realistic stat constants
         const CLUB_AIR_TIME = { driver: 6.0, iron: 4.5, putter: 0 };
         const MPH_PER_PX_FRAME = 30.22;  // 170 mph / 5.625 px/frame (full power driver)
-        const FEET_PER_PX = 2.4;          // 900 ft / 375 px (full power driver distance)
+        const PAR4_HOLE_FT = 1300;         // Average par 4 distance + 100 ft
 
         // Beer/cig images for summary box
         const beerImg = new Image(); beerImg.src = 'budweiser.png';
@@ -1851,7 +1869,11 @@
                 }
 
                 gameStarted = true;
-                sendToDJ({ type: 'setGameMode', enabled: gameMusicMode, focus: 50, fun: 0 });
+                // Carry forward music speed based on accumulated score
+                const mDiff = totalStrokes - totalPar;
+                const mFocus = Math.max(0, Math.min(100, 50 - mDiff * 10));
+                const mFun = Math.min(100, getSwagPct() * 100);
+                sendToDJ({ type: 'setGameMode', enabled: gameMusicMode, focus: mFocus, fun: mFun });
                 gameLoop();
             };
             img.onerror = function() {
@@ -1908,6 +1930,17 @@
             document.getElementById('holeNumber').textContent = currentHole.name;
             document.getElementById('parValue').textContent = currentHole.par;
             updateScorePanel();
+
+            // Reset shot/hole summary state
+            shotSummaryMessages = [];
+            shotBeersUsed = 0;
+            shotCigsUsed = 0;
+            displayBeers = 0;
+            displayCigs = 0;
+            shotStatsVisible = false;
+            holeSummaryMessages = [];
+            holeBeersTotal = 0;
+            holeCigsTotal = 0;
 
             // Wind system (practice + multiplayer)
             if (gameMode === 'practice') {
@@ -2279,7 +2312,6 @@
             displayCigs = shotCigsUsed;
             shotBeersUsed = 0;
             shotCigsUsed = 0;
-            shotSummaryVisible = false;
             shotStatsVisible = true;
             const initialSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
             frozenStatSpeed = initialSpeed * MPH_PER_PX_FRAME;
@@ -2373,18 +2405,35 @@
         function updateWindIndicator() {
             const el = document.getElementById('windControls');
             if (!el) return;
-            if (gameMode !== 'practice' && !isMultiplayer) {
+            const hasWind = gameMode === 'practice' || isMultiplayer;
+            const hasCoins = !!playerName;
+            if (!hasWind && !hasCoins) {
                 el.style.display = 'none';
                 if (windFlagAnimId) { cancelAnimationFrame(windFlagAnimId); windFlagAnimId = null; }
                 return;
             }
             el.style.display = 'block';
-            // Hide wind buttons in multiplayer (random wind, not changeable)
-            const windBtns = el.querySelector('div:last-child');
-            if (windBtns) windBtns.style.display = isMultiplayer ? 'none' : 'flex';
-            const mph = Math.round(windStrength * 30);
-            document.getElementById('windLabel').textContent = `${mph} mph`;
-            startWindFlagAnimation();
+            // Show wind flag/label only when wind is active
+            const windCenter = el.querySelector('[id="windFlagCanvas"]').parentElement;
+            windCenter.style.display = hasWind ? 'flex' : 'none';
+            // Show wind buttons only in practice mode
+            const windBtns = document.getElementById('windButtons');
+            if (windBtns) windBtns.style.display = (gameMode === 'practice' && !isMultiplayer) ? 'flex' : 'none';
+            // Show coins or spacer
+            const coinRow = document.getElementById('coinBalanceRow');
+            const coinSpacer = document.getElementById('coinSpacer');
+            if (hasCoins && coinRow) {
+                coinRow.style.display = 'flex';
+                if (coinSpacer) coinSpacer.style.display = 'none';
+            } else {
+                if (coinRow) coinRow.style.display = 'none';
+                if (coinSpacer) coinSpacer.style.display = 'block';
+            }
+            if (hasWind) {
+                const mph = Math.round(windStrength * 30);
+                document.getElementById('windLabel').textContent = `${mph} mph`;
+                startWindFlagAnimation();
+            }
         }
 
         function startWindFlagAnimation() {
@@ -2994,6 +3043,26 @@
             totalStrokes += strokes;
             totalPar += currentHole.par;
 
+            // Hole summary on completion screen
+            const summaryDiv = document.getElementById('completionSummary');
+            const summaryParts = [];
+            if (holeSummaryMessages.length > 0) {
+                // Deduplicate: show count for repeated messages
+                const counts = {};
+                holeSummaryMessages.forEach(m => { counts[m] = (counts[m] || 0) + 1; });
+                Object.entries(counts).forEach(([m, c]) => {
+                    summaryParts.push(c > 1 ? `${m} x${c}` : m);
+                });
+            }
+            if (holeBeersTotal > 0) summaryParts.push('Beers: ' + holeBeersTotal);
+            if (holeCigsTotal > 0) summaryParts.push('Cigs: ' + holeCigsTotal);
+            if (summaryParts.length > 0) {
+                summaryDiv.textContent = summaryParts.join(' | ');
+                summaryDiv.style.display = 'block';
+            } else {
+                summaryDiv.style.display = 'none';
+            }
+
             // Award bottom shelf coins (1 per stroke under par)
             const coinsDiv = document.getElementById('completionCoins');
             if (diff < 0 && playerName) {
@@ -3154,6 +3223,8 @@
             if (ballMoving) return;
             bendMeter = Math.min(5, bendMeter + 1);
             shotBeersUsed++;
+            displayBeers = shotBeersUsed;
+            holeBeersTotal++;
             showPowerupFeedback('Glug', dragEndX || canvas.width / 2, dragEndY || canvas.height / 2);
         }
 
@@ -3162,6 +3233,8 @@
             if (ballMoving) return;
             bendMeter = Math.max(-5, bendMeter - 1);
             shotCigsUsed++;
+            displayCigs = shotCigsUsed;
+            holeCigsTotal++;
             showPowerupFeedback('Chomp', dragEndX || canvas.width / 2, dragEndY || canvas.height / 2);
         }
 
@@ -3186,7 +3259,13 @@
         function showPowerupFeedback(text, x, y, frames, extraClass) {
             // Collect into shot summary (skip MP reactions and powerup use messages)
             if (extraClass !== 'mp-reaction' && !replayingOpponentShot && text !== 'Glug' && text !== 'Chomp') {
-                shotSummaryMessages.push(text);
+                // Limit WHACK! to 2 per shot
+                if (text === 'WHACK!' && shotSummaryMessages.filter(m => m === 'WHACK!').length >= 2) {
+                    // Skip — already have 2 WHACK! messages this shot
+                } else {
+                    shotSummaryMessages.push(text);
+                    holeSummaryMessages.push(text);
+                }
             }
             // Collect MP reactions into chat box
             if (extraClass === 'mp-reaction') {
@@ -4012,49 +4091,50 @@
 
         // ==================== SHOT SUMMARY BOX (under predictor, left side) ====================
         function drawShotSummary() {
-            if (!shotSummaryVisible || replayingOpponentShot) return;
+            if (replayingOpponentShot) return;
             if (shotSummaryMessages.length === 0 && displayBeers === 0 && displayCigs === 0) return;
 
             const BOX_X = 8;
-            const BOX_Y = 10;  // Top left of canvas
-            const BOX_W = 180;
-            const LINE_H = 26;
-            const beerCigH = (displayBeers > 0 || displayCigs > 0) ? 56 : 0;
-            const BOX_H = Math.max(50, shotSummaryMessages.length * LINE_H + beerCigH + 16);
+            const BOX_Y = 10;
+            const BOX_SIZE = 180;  // Square box
 
             ctx.save();
             // Background
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+            ctx.fillRect(BOX_X, BOX_Y, BOX_SIZE, BOX_SIZE);
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+            ctx.strokeRect(BOX_X, BOX_Y, BOX_SIZE, BOX_SIZE);
 
             // Bold black text messages
             ctx.fillStyle = '#000';
             ctx.font = 'bold 18px sans-serif';
             ctx.textAlign = 'left';
+            const LINE_H = 26;
             shotSummaryMessages.forEach((msg, i) => {
-                ctx.fillText(msg, BOX_X + 8, BOX_Y + 22 + i * LINE_H, BOX_W - 16);
+                const y = BOX_Y + 22 + i * LINE_H;
+                if (y < BOX_Y + BOX_SIZE - 10) {
+                    ctx.fillText(msg, BOX_X + 8, y, BOX_SIZE - 16);
+                }
             });
 
             // Beer/cig count text + icons
             let countY = BOX_Y + 14 + shotSummaryMessages.length * LINE_H;
-            if (displayBeers > 0) {
+            if (displayBeers > 0 && countY + 14 < BOX_Y + BOX_SIZE - 4) {
                 ctx.fillStyle = '#000';
                 ctx.font = 'bold 16px sans-serif';
                 ctx.fillText('Beers: ' + displayBeers, BOX_X + 8, countY + 14);
                 if (beerImg.complete) {
-                    ctx.drawImage(beerImg, BOX_X + BOX_W - 32, countY, 24, 24);
+                    ctx.drawImage(beerImg, BOX_X + BOX_SIZE - 32, countY, 24, 24);
                 }
                 countY += 26;
             }
-            if (displayCigs > 0) {
+            if (displayCigs > 0 && countY + 14 < BOX_Y + BOX_SIZE - 4) {
                 ctx.fillStyle = '#000';
                 ctx.font = 'bold 16px sans-serif';
                 ctx.fillText('Cigs: ' + displayCigs, BOX_X + 8, countY + 14);
                 if (cigImg.complete) {
-                    ctx.drawImage(cigImg, BOX_X + BOX_W - 32, countY, 24, 24);
+                    ctx.drawImage(cigImg, BOX_X + BOX_SIZE - 32, countY, 24, 24);
                 }
             }
 
@@ -4062,10 +4142,9 @@
         }
 
         // ==================== SHOT STATS WINDOW (right side) ====================
-        const STATS_W = 150;
-        const STATS_H = 210;
-        const STATS_X = CANVAS_WIDTH - 10 - STATS_W;
-        const STATS_Y = 785 - STATS_H;  // Bottom at 785, same as predictor
+        const STATS_SIZE = 180;  // Square box
+        const STATS_X = CANVAS_WIDTH - 10 - STATS_SIZE;
+        const STATS_Y = 785 - STATS_SIZE;
 
         // Helper: draw red text with black border
         function drawRedBorderText(text, x, y, fontSize) {
@@ -4084,16 +4163,16 @@
             ctx.save();
             // Background
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.fillRect(STATS_X, STATS_Y, STATS_W, STATS_H);
+            ctx.fillRect(STATS_X, STATS_Y, STATS_SIZE, STATS_SIZE);
             // Red border
             ctx.strokeStyle = '#cc3333';
             ctx.lineWidth = 3;
-            ctx.strokeRect(STATS_X, STATS_Y, STATS_W, STATS_H);
+            ctx.strokeRect(STATS_X, STATS_Y, STATS_SIZE, STATS_SIZE);
 
             ctx.textAlign = 'left';
             const x = STATS_X + 10;
             let y = STATS_Y + 28;
-            const lineH = 36;
+            const lineH = 32;
 
             // Club name
             drawRedBorderText(frozenStatClub.toUpperCase(), x, y, 20);
@@ -4104,7 +4183,8 @@
             y += lineH;
 
             // Distance (live during flight)
-            const dist = ballMoving ? shotCumulativeDistance * FEET_PER_PX : frozenStatDistance;
+            const feetPerPx = holeStartDistance > 0 ? PAR4_HOLE_FT / holeStartDistance : 2.4;
+            const dist = ballMoving ? shotCumulativeDistance * feetPerPx : frozenStatDistance;
             drawRedBorderText(Math.round(dist) + ' ft', x, y, 22);
             y += lineH;
 
@@ -4125,8 +4205,8 @@
         }
 
         function finalizeShotSummary() {
-            frozenStatDistance = shotCumulativeDistance * FEET_PER_PX;
-            shotSummaryVisible = true;
+            const feetPerPx = holeStartDistance > 0 ? PAR4_HOLE_FT / holeStartDistance : 2.4;
+            frozenStatDistance = shotCumulativeDistance * feetPerPx;
         }
 
         // ==================== MP CHAT BOX (bottom-right of canvas) ====================
@@ -4137,27 +4217,29 @@
             mpChatMessages = mpChatMessages.filter(m => now - m.time < 10000);
             if (mpChatMessages.length === 0) return;
 
-            const CHAT_W = 170;
+            const CHAT_SIZE = 170;  // Square box
             const LINE_H = 16;
-            const CHAT_H = mpChatMessages.length * LINE_H + 10;
-            const CHAT_X = CANVAS_WIDTH - 10 - CHAT_W;
-            const CHAT_Y = CANVAS_HEIGHT - 10 - CHAT_H;
+            const CHAT_X = CANVAS_WIDTH - 10 - CHAT_SIZE;
+            const CHAT_Y = CANVAS_HEIGHT - 10 - CHAT_SIZE;
 
             ctx.save();
             // Background
             ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.fillRect(CHAT_X, CHAT_Y, CHAT_W, CHAT_H);
+            ctx.fillRect(CHAT_X, CHAT_Y, CHAT_SIZE, CHAT_SIZE);
             // Red border
             ctx.strokeStyle = 'rgba(200, 50, 50, 0.8)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(CHAT_X, CHAT_Y, CHAT_W, CHAT_H);
+            ctx.strokeRect(CHAT_X, CHAT_Y, CHAT_SIZE, CHAT_SIZE);
 
-            // Messages
+            // Messages (draw from bottom up so newest are at bottom)
             ctx.fillStyle = '#000';
             ctx.font = '11px sans-serif';
             ctx.textAlign = 'left';
             mpChatMessages.forEach((msg, i) => {
-                ctx.fillText(msg.text, CHAT_X + 6, CHAT_Y + 14 + i * LINE_H, CHAT_W - 12);
+                const y = CHAT_Y + 14 + i * LINE_H;
+                if (y < CHAT_Y + CHAT_SIZE - 4) {
+                    ctx.fillText(msg.text, CHAT_X + 6, y, CHAT_SIZE - 12);
+                }
             });
             ctx.restore();
         }
@@ -4810,7 +4892,10 @@
                 toggleMpControls();
 
                 gameStarted = true;
-                sendToDJ({ type: 'setGameMode', enabled: gameMusicMode, focus: 50, fun: 0 });
+                const mpDiff = totalStrokes - totalPar;
+                const mpFocus = Math.max(0, Math.min(100, 50 - mpDiff * 10));
+                const mpFun = Math.min(100, getSwagPct() * 100);
+                sendToDJ({ type: 'setGameMode', enabled: gameMusicMode, focus: mpFocus, fun: mpFun });
                 startHole(mpCurrentHoleIndex);
             });
         }

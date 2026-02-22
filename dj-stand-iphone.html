@@ -507,169 +507,152 @@
                 return `${mins}:${secs.toString().padStart(2, '0')}`;
             };
 
+            // Dynamic slider heights based on viewport
+            const sliderContainerRef = useRef(null);
+            const [sliderH, setSliderH] = useState(300);
+
+            useEffect(() => {
+                const measure = () => {
+                    if (sliderContainerRef.current) {
+                        const h = sliderContainerRef.current.clientHeight;
+                        if (h > 50) setSliderH(h);
+                    }
+                };
+                measure();
+                window.addEventListener('resize', measure);
+                return () => window.removeEventListener('resize', measure);
+            }, []);
+
+            const funH = Math.max(200, sliderH - 8);
+            const smallH = Math.max(120, Math.round(funH * 0.55));
+
+            const [showPlaylist, setShowPlaylist] = useState(false);
+
             return (
                 <div style={{
-                    minHeight: '100vh',
+                    height: '100vh',
                     background: BG,
                     fontFamily: FONT,
-                    padding: '20px 16px',
-                    color: '#222'
+                    padding: '12px 12px 8px',
+                    color: '#222',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    boxSizing: 'border-box'
                 }}>
-                    <div style={{ maxWidth: 400, margin: '0 auto' }}>
+                    {/* Title */}
+                    <div style={{ textAlign: 'center', marginBottom: 8, flexShrink: 0 }}>
+                        <h1 style={{
+                            fontSize: 24, fontWeight: 700, fontStyle: 'italic',
+                            color: '#000', margin: 0, lineHeight: 1.1
+                        }}>
+                            Roughest Demo Tapes 3
+                        </h1>
+                    </div>
 
-                        {/* Title */}
-                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                            <h1 style={{
-                                fontSize: 28, fontWeight: 700, fontStyle: 'italic',
-                                color: '#000', margin: 0, lineHeight: 1.1
-                            }}>
-                                Roughest Demo<br/>Tapes 3
-                            </h1>
-                        </div>
+                    {/* Waveform */}
+                    <div style={{ background: '#000', padding: 3, marginBottom: 4, flexShrink: 0 }}>
+                        <canvas ref={canvasRef} width={836} height={50}
+                            style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    </div>
 
-                        {/* Waveform */}
-                        <div style={{ background: '#000', padding: 4, marginBottom: 8 }}>
-                            <canvas ref={canvasRef} width={836} height={50}
-                                style={{ width: '100%', height: 'auto', display: 'block' }} />
-                        </div>
-
-                        {/* Now Playing */}
-                        {(trackLoaded || loading) && tracks[currentTrackIndex] && (
-                            <div style={{ textAlign: 'center', marginBottom: 12, fontSize: 13, color: '#333' }}>
+                    {/* Now Playing */}
+                    <div style={{ textAlign: 'center', marginBottom: 6, fontSize: 12, color: '#333', flexShrink: 0, minHeight: 16 }}>
+                        {(trackLoaded || loading) && tracks[currentTrackIndex] ? (
+                            <>
                                 <span style={{ color: RED, fontWeight: 700 }}>{tracks[currentTrackIndex].name}</span>
                                 {' '}{formatTime(currentTime)} / {formatTime(duration)}
-                            </div>
-                        )}
+                            </>
+                        ) : '\u00A0'}
+                    </div>
 
-                        {/* Transport Controls — offset upper-left */}
-                        <div style={{
-                            display: 'flex', gap: 8, justifyContent: 'flex-start', alignItems: 'center',
-                            marginBottom: 16, paddingLeft: 4
-                        }}>
-                            {/* Skip Back — large triangle */}
-                            <button onClick={() => skipTrack(-1)} disabled={tracks.length === 0}
-                                style={{
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
-                                }}>
-                                <svg width="80" height="70" viewBox="0 0 80 70">
-                                    <polygon points="75,5 5,35 75,65" fill={RED} />
+                    {/* Transport Controls */}
+                    <div style={{
+                        display: 'flex', gap: 6, justifyContent: 'flex-start', alignItems: 'center',
+                        marginBottom: 8, paddingLeft: 4, flexShrink: 0
+                    }}>
+                        <button onClick={() => skipTrack(-1)} disabled={tracks.length === 0}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
+                            }}>
+                            <svg width="60" height="50" viewBox="0 0 80 70">
+                                <polygon points="75,5 5,35 75,65" fill={RED} />
+                            </svg>
+                        </button>
+
+                        <button onClick={togglePlay} disabled={!trackLoaded}
+                            style={{
+                                width: 60, height: 60,
+                                borderRadius: '50%',
+                                background: '#fff',
+                                border: `3px solid ${RED}`,
+                                cursor: trackLoaded ? 'pointer' : 'default',
+                                opacity: trackLoaded ? 1 : 0.5,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: 0, flexShrink: 0
+                            }}>
+                            {isPlaying ? (
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill={RED}>
+                                    <rect x="6" y="4" width="4" height="16" />
+                                    <rect x="14" y="4" width="4" height="16" />
                                 </svg>
-                            </button>
-
-                            {/* Play/Pause — circle with triangle */}
-                            <button onClick={togglePlay} disabled={!trackLoaded}
-                                style={{
-                                    width: 80, height: 80,
-                                    borderRadius: '50%',
-                                    background: '#fff',
-                                    border: `3px solid ${RED}`,
-                                    cursor: trackLoaded ? 'pointer' : 'default',
-                                    opacity: trackLoaded ? 1 : 0.5,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    padding: 0, flexShrink: 0
-                                }}>
-                                {isPlaying ? (
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill={RED}>
-                                        <rect x="6" y="4" width="4" height="16" />
-                                        <rect x="14" y="4" width="4" height="16" />
-                                    </svg>
-                                ) : (
-                                    <svg width="36" height="36" viewBox="0 0 24 24" fill={RED}>
-                                        <polygon points="6 3 20 12 6 21 6 3" />
-                                    </svg>
-                                )}
-                            </button>
-
-                            {/* Skip Forward — large triangle */}
-                            <button onClick={() => skipTrack(1)} disabled={tracks.length === 0}
-                                style={{
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
-                                }}>
-                                <svg width="80" height="70" viewBox="0 0 80 70">
-                                    <polygon points="5,5 75,35 5,65" fill={RED} />
+                            ) : (
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill={RED}>
+                                    <polygon points="6 3 20 12 6 21 6 3" />
                                 </svg>
-                            </button>
-                        </div>
+                            )}
+                        </button>
 
-                        {/* Vertical Faders — 4 small left + FUN large right */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'flex-end',
-                            gap: 16,
-                            marginBottom: 20,
-                            padding: '0 8px'
-                        }}>
-                            {/* Left group: MSTR, Verb, Dirt, LPF */}
-                            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end' }}>
-                                <VerticalSlider
-                                    value={masterVol} min={0} max={100} step={1}
-                                    onChange={(v) => setMasterDirect(v)}
-                                    height={320} label="MSTR"
-                                    disabled={false}
-                                />
-                                <VerticalSlider
-                                    value={reverb} min={0} max={100} step={1}
-                                    onChange={(v) => !gameMode && setReverbDirect(v)}
-                                    height={320} label="Verb"
-                                    disabled={gameMode}
-                                />
-                                <VerticalSlider
-                                    value={distortion} min={0} max={100} step={1}
-                                    onChange={(v) => !gameMode && setDistortionDirect(v)}
-                                    height={320} label="Dirt"
-                                    disabled={gameMode}
-                                />
-                                <VerticalSlider
-                                    value={lpf} min={0} max={100} step={1}
-                                    onChange={(v) => !gameMode && setLpfDirect(v)}
-                                    height={320} label="LPF"
-                                    disabled={gameMode}
-                                />
-                            </div>
+                        <button onClick={() => skipTrack(1)} disabled={tracks.length === 0}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
+                            }}>
+                            <svg width="60" height="50" viewBox="0 0 80 70">
+                                <polygon points="5,5 75,35 5,65" fill={RED} />
+                            </svg>
+                        </button>
 
-                            {/* FUN (Speed/Pitch) — tallest, on the right */}
-                            <VerticalSlider
-                                value={speed} min={0.54} max={2.0} step={0.01}
-                                onChange={(v) => !gameMode && setSpeedDirect(v)}
-                                height={560} label="FUN"
-                                disabled={gameMode}
-                            />
-                        </div>
+                        {/* Playlist toggle */}
+                        <button onClick={() => setShowPlaylist(!showPlaylist)}
+                            style={{
+                                marginLeft: 'auto', background: 'none', border: `1px solid ${RED}`,
+                                color: RED, padding: '4px 10px', fontSize: 9, fontWeight: 700,
+                                fontFamily: FONT, letterSpacing: 1, cursor: 'pointer'
+                            }}>
+                            {showPlaylist ? 'FADERS' : 'TRACKS'}
+                        </button>
 
-                        {/* Reset button */}
-                        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                            <button onClick={resetControls}
-                                style={{
-                                    background: RED, border: 'none', color: '#fff',
-                                    padding: '10px 28px', fontSize: 14, fontWeight: 700,
-                                    fontFamily: FONT, letterSpacing: 2, cursor: 'pointer',
-                                    animation: 'redPulse 2s ease-in-out infinite'
-                                }}>
-                                RESET
-                            </button>
-                        </div>
+                        {/* Reset */}
+                        <button onClick={resetControls}
+                            style={{
+                                background: RED, border: 'none', color: '#fff',
+                                padding: '4px 10px', fontSize: 9, fontWeight: 700,
+                                fontFamily: FONT, letterSpacing: 1, cursor: 'pointer',
+                                animation: 'redPulse 2s ease-in-out infinite'
+                            }}>
+                            RESET
+                        </button>
+                    </div>
 
-                        {/* Playlist */}
-                        {tracks.length > 0 && (
-                            <div style={{ background: 'rgba(0,0,0,0.06)', padding: 12, marginBottom: 12, maxHeight: 180, overflowY: 'auto' }}>
-                                <div style={{ fontSize: 10, color: '#555', letterSpacing: 2, textAlign: 'center', marginBottom: 6 }}>
-                                    PLAYLIST
-                                </div>
+                    {/* Slider / Playlist area — fills remaining space */}
+                    <div ref={sliderContainerRef} style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                        {showPlaylist ? (
+                            /* Playlist view */
+                            <div style={{ overflowY: 'auto', height: '100%', padding: '4px 0' }}>
                                 {tracks.map((track, index) => (
                                     <div key={index}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 8,
-                                            padding: '5px 8px', marginBottom: 2, cursor: 'pointer',
+                                            padding: '8px 10px', marginBottom: 2, cursor: 'pointer',
                                             background: index === currentTrackIndex ? 'rgba(200,50,50,0.15)' : 'transparent',
                                             border: index === currentTrackIndex ? `1px solid ${RED}` : '1px solid transparent'
                                         }}
                                         onClick={() => loadTrackByIndex(index)}
                                     >
                                         <span style={{
-                                            flex: 1, fontSize: 13,
+                                            flex: 1, fontSize: 14,
                                             color: index === currentTrackIndex ? RED : '#333',
                                             fontWeight: index === currentTrackIndex ? 700 : 400
                                         }}>
@@ -681,12 +664,55 @@
                                     </div>
                                 ))}
                             </div>
+                        ) : (
+                            /* Fader view */
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'flex-end',
+                                gap: 10,
+                                height: '100%',
+                                padding: '0 4px'
+                            }}>
+                                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                                    <VerticalSlider
+                                        value={masterVol} min={0} max={100} step={1}
+                                        onChange={(v) => setMasterDirect(v)}
+                                        height={smallH} label="MSTR"
+                                        disabled={false}
+                                    />
+                                    <VerticalSlider
+                                        value={reverb} min={0} max={100} step={1}
+                                        onChange={(v) => !gameMode && setReverbDirect(v)}
+                                        height={smallH} label="Verb"
+                                        disabled={gameMode}
+                                    />
+                                    <VerticalSlider
+                                        value={distortion} min={0} max={100} step={1}
+                                        onChange={(v) => !gameMode && setDistortionDirect(v)}
+                                        height={smallH} label="Dirt"
+                                        disabled={gameMode}
+                                    />
+                                    <VerticalSlider
+                                        value={lpf} min={0} max={100} step={1}
+                                        onChange={(v) => !gameMode && setLpfDirect(v)}
+                                        height={smallH} label="LPF"
+                                        disabled={gameMode}
+                                    />
+                                </div>
+                                <VerticalSlider
+                                    value={speed} min={0.54} max={2.0} step={0.01}
+                                    onChange={(v) => !gameMode && setSpeedDirect(v)}
+                                    height={funH} label="FUN"
+                                    disabled={gameMode}
+                                />
+                            </div>
                         )}
+                    </div>
 
-                        {/* Footer */}
-                        <div style={{ textAlign: 'center', marginTop: 12, fontSize: 10, color: '#555', letterSpacing: 2 }}>
-                            BOTTOM SHELF
-                        </div>
+                    {/* Footer */}
+                    <div style={{ textAlign: 'center', paddingTop: 4, fontSize: 9, color: '#555', letterSpacing: 2, flexShrink: 0 }}>
+                        BOTTOM SHELF
                     </div>
                 </div>
             );

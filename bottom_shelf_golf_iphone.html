@@ -1001,7 +1001,7 @@
                 <div class="songTitle" id="songDisplay">Press Play</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <div id="ipodPowerBtn" class="off" title="Toggle Game/Free Mix Mode">⏻</div>
+                <div id="ipodPowerBtn" title="Toggle Game/Free Mix Mode">⏻</div>
             </div>
             <div id="clickWheel">
                 <div id="centerButton" title="Play/Pause">▶</div>
@@ -2067,7 +2067,7 @@
             // iPod power button — toggle game/free mix mode
             onTap(document.getElementById('ipodPowerBtn'), () => {
                 gameMusicMode = !gameMusicMode;
-                document.getElementById('ipodPowerBtn').classList.toggle('off', !gameMusicMode);
+                document.getElementById('ipodPowerBtn').classList.toggle('off', gameMusicMode);
                 if (gameMusicMode) {
                     // Just enable game mode — don't send meters (preserves current speed/song)
                     sendToDJ({ type: 'setGameMode', enabled: true });
@@ -3206,7 +3206,7 @@
             totalPar = 0;
             sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
             gameMusicMode = false;
-            document.getElementById('ipodPowerBtn').classList.add('off');
+            document.getElementById('ipodPowerBtn').classList.remove('off');
 
             // Cleanup multiplayer
             if (isMultiplayer) {

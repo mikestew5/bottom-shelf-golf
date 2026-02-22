@@ -934,7 +934,7 @@
                         <div class="songTitle" id="songDisplay">Press Play</div>
                         <div id="ipodModeDisplay" style="font-size:8px; color:#336; margin-top:1px;">🎛️ FREE MIX</div>
                     </div>
-                    <div id="ipodPowerBtn" class="off" title="Toggle Game/Free Mix Mode">⏻</div>
+                    <div id="ipodPowerBtn" title="Toggle Game/Free Mix Mode">⏻</div>
                     <div id="ipodModeLabel">FREE MIX</div>
                     <div id="clickWheel">
                         <div id="centerButton" title="Play/Pause">▶</div>
@@ -1994,7 +1994,7 @@
             // iPod power button — toggle game/free mix mode
             document.getElementById('ipodPowerBtn').addEventListener('click', () => {
                 gameMusicMode = !gameMusicMode;
-                document.getElementById('ipodPowerBtn').classList.toggle('off', !gameMusicMode);
+                document.getElementById('ipodPowerBtn').classList.toggle('off', gameMusicMode);
                 document.getElementById('ipodModeLabel').textContent = gameMusicMode ? 'GAME MODE' : 'FREE MIX';
                 document.getElementById('ipodModeDisplay').innerHTML = gameMusicMode ? '🎮 GAME' : '🎛️ FREE MIX';
                 if (gameMusicMode) {
@@ -3080,7 +3080,7 @@
             totalPar = 0;
             sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
             gameMusicMode = false;
-            document.getElementById('ipodPowerBtn').classList.add('off');
+            document.getElementById('ipodPowerBtn').classList.remove('off');
             document.getElementById('ipodModeLabel').textContent = 'FREE MIX';
             document.getElementById('ipodModeDisplay').innerHTML = '🎛️ FREE MIX';
 

@@ -677,6 +677,81 @@
             height: 100%;
             border: none;
         }
+        /* ==================== TUTORIAL OVERLAY ==================== */
+        .tutorial-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 900;
+            pointer-events: auto;
+        }
+        .tutorial-dim {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            pointer-events: none;
+        }
+        .tutorial-popup {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 40, 27, 0.96);
+            border: 2px solid #FFD700;
+            border-radius: 14px;
+            padding: 16px 20px;
+            max-width: 300px;
+            width: 85vw;
+            z-index: 910;
+            text-align: center;
+            animation: tutorialFadeIn 0.3s ease;
+            pointer-events: auto;
+        }
+        @keyframes tutorialFadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .tutorial-step-label {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 11px;
+            color: rgba(255, 215, 0, 0.5);
+            margin-bottom: 6px;
+        }
+        .tutorial-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 15px;
+            color: #eee;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+        .tutorial-text b { color: #FFD700; }
+        .tutorial-skip {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 12px;
+            color: rgba(255, 215, 0, 0.5);
+            cursor: pointer;
+            border: none;
+            background: none;
+            text-decoration: underline;
+        }
+        .tutorial-tap-hint {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 12px;
+            color: rgba(255, 215, 0, 0.7);
+            font-style: italic;
+            margin-top: 4px;
+        }
+        .tutorial-spotlight {
+            position: absolute;
+            border: 3px solid #FFD700;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 20px rgba(255, 215, 0, 0.1);
+            z-index: 905;
+            pointer-events: none;
+            animation: spotlightPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes spotlightPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+            50% { box-shadow: 0 0 35px rgba(255, 215, 0, 0.7); }
+        }
     </style>
 </head>
 <body>
@@ -688,9 +763,16 @@
         <img src="assets/images/bsgheader.png" alt="Bottom Shelf Golf" style="max-width: 300px; width: 80vw; object-fit: contain;">
 
         <!-- Mode Selection -->
-        <div id="modeSelect" class="mode-select">
-            <button class="mode-btn" id="practiceBtn">PRACTICE</button>
-            <button class="mode-btn mode-btn-play" id="playBtn2">PLAY</button>
+        <div id="modeSelect" class="mode-select" style="flex-direction: column; align-items: center;">
+            <div style="display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;">
+                <button class="mode-btn" id="practiceBtn">PRACTICE</button>
+                <button class="mode-btn mode-btn-play" id="playBtn2">PLAY</button>
+            </div>
+            <button class="mode-btn" id="howToPlayBtn" style="
+                font-size: 14px; padding: 8px 22px; margin-top: 4px;
+                background: transparent; border-color: rgba(255,215,0,0.5); color: rgba(255,215,0,0.7);
+                letter-spacing: 2px;
+            ">HOW TO PLAY</button>
         </div>
 
         <!-- Play Sub-Mode Selection -->
@@ -703,6 +785,18 @@
                 <button class="mode-btn" id="multiplayerBtn">MULTIPLAYER</button>
             </div>
             <button class="mode-btn" id="playModeBackBtn" style="font-size: 16px; padding: 10px 24px; margin-top: 12px;">BACK</button>
+        </div>
+
+        <!-- Course Selection -->
+        <div id="courseSelect" style="display:none; text-align:center;">
+            <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 24px; color: #FFD700; margin-bottom: 20px;">
+                SELECT COURSE
+            </div>
+            <div class="mode-select" style="flex-direction: column; gap: 15px;">
+                <button class="mode-btn mode-btn-play" id="courseHumbleBtn" style="font-size: 20px; width: 260px;">HUMBLE BEGINNINGS</button>
+                <button class="mode-btn" id="courseComingSoonBtn" style="font-size: 18px; width: 260px; opacity: 0.4; cursor: not-allowed; border-color: #888; color: #888;">COMING SOON</button>
+            </div>
+            <button class="mode-btn" id="courseBackBtn" style="font-size: 14px; padding: 6px 16px; margin-top: 15px;">BACK</button>
         </div>
 
         <!-- Player Name Entry (main menu, optional) -->
@@ -743,6 +837,87 @@
             <div class="hole-select-grid" id="shopGrid"></div>
             <button class="mode-btn" id="shopBackBtn" style="margin-top: 16px; font-size: 18px; padding: 10px 28px;">BACK</button>
             <div style="height: 60px;"></div>
+        </div>
+    </div>
+
+    <!-- HOW TO PLAY OVERLAY -->
+    <div id="howToPlayOverlay" style="
+        display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 40, 27, 0.97); z-index: 1100;
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+        padding: 20px 24px 40px;
+    ">
+        <div style="max-width: 360px; margin: 0 auto;">
+            <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 24px; color: #FFD700; text-align: center; margin-bottom: 20px;">
+                HOW TO PLAY
+            </div>
+
+            <!-- PUTTING -->
+            <div style="margin-bottom: 20px;">
+                <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: #FFD700; margin-bottom: 6px;">🏌️ Putting</div>
+                <div style="font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #ddd; line-height: 1.5;">
+                    <b style="color:#fff;">Tap the ball</b> to start aiming, then <b style="color:#fff;">drag away</b> from where you want to hit. The further you drag, the harder you putt — watch the power meter. Release to swing.
+                </div>
+            </div>
+
+            <!-- CLUBS -->
+            <div style="margin-bottom: 20px;">
+                <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: #FFD700; margin-bottom: 6px;">🏌️ Clubs</div>
+                <div style="font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #ddd; line-height: 1.5;">
+                    Tap the <b style="color:#c8a200;">club button</b> to cycle between Driver, Iron, and Putter. Each has different range and zoom levels. Driver uses a power meter — iron and putter use drag distance.
+                </div>
+            </div>
+
+            <!-- WOBBLE -->
+            <div style="margin-bottom: 20px;">
+                <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: #FFD700; margin-bottom: 6px;">🍺🚬 Wobble Controls</div>
+                <div style="font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #ddd; line-height: 1.5;">
+                    <b style="color:#fff;">Beer</b> 🍺 increases the fun meter → more wobble on your aim line.<br>
+                    <b style="color:#fff;">Marlboro</b> 🚬 decreases it → straighter shots.<br>
+                    Some holes <i>require</i> wobble to curve around obstacles. Use the <b style="color:#fff;">fine-tune buttons</b> (-1, -.5, 0, +.5, +1) above the course for precise control.
+                </div>
+            </div>
+
+            <!-- BEND -->
+            <div style="margin-bottom: 20px;">
+                <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: #FFD700; margin-bottom: 6px;">🌀 Shot Bend</div>
+                <div style="font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #ddd; line-height: 1.5;">
+                    While aiming, <b style="color:#fff;">drag up or down on the right side</b> of the screen to add curve to your shot. The preview line shows the bend path before you release.
+                </div>
+            </div>
+
+            <!-- MUSIC -->
+            <div style="margin-bottom: 20px;">
+                <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: #FFD700; margin-bottom: 6px;">🎵 Music & Mixing</div>
+                <div style="font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #ddd; line-height: 1.5;">
+                    Use the <b style="color:#fff;">iPod controls</b> at the bottom to play/pause and skip tracks.<br><br>
+                    Tap <b style="color:#fff;">♫ NOW PLAYING</b> to open the <b style="color:#c8a200;">DJ Stand</b> — a full mixing board where you can:<br>
+                    • Adjust <b style="color:#fff;">playback speed</b> for tempo effects<br>
+                    • Tweak <b style="color:#fff;">effect sliders</b> (reverb, distortion, etc.)<br>
+                    • Drag sliders to the <b style="color:#FFD700;">gold reference bars</b> to reset to defaults<br><br>
+                    The <b style="color:#fff;">⏻ power button</b> toggles between Game Mode (music speed follows your score) and Free Mix (you control everything).
+                </div>
+            </div>
+
+            <!-- SCORING -->
+            <div style="margin-bottom: 20px;">
+                <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: #FFD700; margin-bottom: 6px;">⛳ Scoring</div>
+                <div style="font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #ddd; line-height: 1.5;">
+                    Each hole has a <b style="color:#fff;">Par</b> (target strokes). Fewer is better. Under par earns you <b style="color:#FFD700;">BS Coins</b> to spend in the Pro Shop on cosmetic ball upgrades.
+                </div>
+            </div>
+
+            <!-- WIND -->
+            <div style="margin-bottom: 24px;">
+                <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: #FFD700; margin-bottom: 6px;">💨 Wind</div>
+                <div style="font-family: 'Cormorant Garamond', serif; font-size: 14px; color: #ddd; line-height: 1.5;">
+                    Wind pushes the ball left or right after each shot. Check the <b style="color:#fff;">wind flag</b> above the course. In Practice mode you can manually adjust wind strength.
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="mode-btn mode-btn-play" id="howToPlayCloseBtn" style="font-size: 18px; padding: 14px 40px;">GOT IT</button>
+            </div>
         </div>
     </div>
 
@@ -1029,6 +1204,9 @@
         const FRICTION = 0.985;
         const STOP_THRESHOLD = 0.15;
         const MAX_POWER = 100;
+        // Putter/iron power curve: higher = more forgiving at low power
+        // 1.0 = linear (old), 2.0 = gentle curve, 3.0 = very forgiving
+        const POWER_CURVE_EXPONENT = 2.2; // ← SAFE TO TWEAK
         const PREVIEW_DISTANCE = 300; // Constant preview length
         const BEND_K = 4; // Controls how exponential the bend curve is
         const BEND_MAX_ANGLE = 90 * Math.PI / 180; // 90 degrees max bend
@@ -1085,7 +1263,8 @@
             vx: 0,
             vy: 0,
             radius: BALL_RADIUS,
-            displayRadius: BALL_BASE_RADIUS
+            displayRadius: BALL_BASE_RADIUS,
+            flightScale: 0 // 0 = on ground, 1 = peak height (for shadow)
         };
 
         let bendMeter = 0; // -5 to 5, starts at 0 (straight)
@@ -1564,7 +1743,7 @@
                 document.getElementById('playerInfo').style.display = 'none';
                 document.getElementById('nameEntry').style.display = 'none';
                 document.getElementById('proShopScreen').style.display = 'none';
-                document.getElementById('holeGrid').style.display = 'grid';
+                document.getElementById('courseSelect').style.display = 'block';
             });
 
             document.getElementById('playBtn2').addEventListener('click', () => {
@@ -1575,15 +1754,18 @@
                 document.getElementById('playModeSelect').style.display = 'block';
             });
 
+            // HOW TO PLAY overlay
+            document.getElementById('howToPlayBtn').addEventListener('click', () => {
+                document.getElementById('howToPlayOverlay').style.display = 'block';
+            });
+            document.getElementById('howToPlayCloseBtn').addEventListener('click', () => {
+                document.getElementById('howToPlayOverlay').style.display = 'none';
+            });
+
             document.getElementById('soloPlayBtn').addEventListener('click', () => {
                 gameMode = 'play';
                 document.getElementById('playModeSelect').style.display = 'none';
-                if (playerName) {
-                    startHole(0);
-                } else {
-                    document.getElementById('nameEntry').style.display = 'flex';
-                    document.getElementById('playerNameInput').focus();
-                }
+                document.getElementById('courseSelect').style.display = 'block';
             });
 
             document.getElementById('playModeBackBtn').addEventListener('click', () => {
@@ -1640,6 +1822,40 @@
                 } else {
                     document.getElementById('mainNameEntry').style.display = 'block';
                     document.getElementById('playerInfo').style.display = 'none';
+                }
+            });
+
+            // Course selection handlers
+            document.getElementById('courseHumbleBtn').addEventListener('click', () => {
+                document.getElementById('courseSelect').style.display = 'none';
+                if (gameMode === 'practice') {
+                    document.getElementById('holeGrid').style.display = 'flex';
+                } else {
+                    if (playerName) {
+                        startHole(0);
+                    } else {
+                        document.getElementById('nameEntry').style.display = 'flex';
+                        document.getElementById('playerNameInput').focus();
+                    }
+                }
+            });
+
+            document.getElementById('courseComingSoonBtn').addEventListener('click', () => {
+                // Disabled — placeholder for future course
+            });
+
+            document.getElementById('courseBackBtn').addEventListener('click', () => {
+                document.getElementById('courseSelect').style.display = 'none';
+                if (gameMode === 'practice') {
+                    document.getElementById('modeSelect').style.display = 'flex';
+                    if (playerName) {
+                        document.getElementById('mainNameEntry').style.display = 'none';
+                        document.getElementById('playerInfo').style.display = 'block';
+                    } else {
+                        document.getElementById('mainNameEntry').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('playModeSelect').style.display = 'block';
                 }
             });
         }
@@ -1888,6 +2104,12 @@
                 }
 
                 gameStarted = true;
+
+                // Start tutorial on first practice play if not completed yet
+                if (gameMode === 'practice' && !tutorial.completed && holeIndex === 0) {
+                    setTimeout(() => startTutorial(), 600);
+                }
+
                 // Carry forward music speed based on accumulated score
                 const mDiff = totalStrokes - totalPar;
                 const mFocus = Math.max(0, Math.min(100, 50 - mDiff * 10));
@@ -2051,7 +2273,7 @@
 
             // Wind control buttons (practice mode)
             document.querySelectorAll('.wind-btn').forEach(btn => {
-                onTap(btn, () => setWind(parseFloat(btn.dataset.wind)));
+                onTap(btn, () => { setWind(parseFloat(btn.dataset.wind)); tutorialCheckFineTune(); });
             });
 
             // iPod controls — route through DJ Stand
@@ -2154,6 +2376,7 @@
                 dragStartY = my;
                 dragEndX = mx;
                 dragEndY = my;
+                tutorialCheckBallTap();
             }
         }
 
@@ -2184,6 +2407,7 @@
             // Track peak drag distance for cancel detection
             const currentDragDist = Math.sqrt((dragStartX - dragEndX) ** 2 + (dragStartY - dragEndY) ** 2);
             if (currentDragDist > peakDragDistance) peakDragDistance = currentDragDist;
+            if (currentDragDist > 30) tutorialCheckDrag();
 
             // Update power bar live when dragging with putter or iron
             if (selectedClub !== 'driver') {
@@ -2196,9 +2420,12 @@
                     ? (targetDrag * cameraZoom) / (MAX_POWER * 0.67)
                     : (targetDrag * cameraZoom) / MAX_POWER;
                 const rawPower = Math.min(dist / dragDivisor, MAX_POWER);
+                // Apply ease-in curve: gentle putts are more forgiving
+                const normalizedPower = rawPower / MAX_POWER;
+                const curvedPower = Math.pow(normalizedPower, POWER_CURVE_EXPONENT) * MAX_POWER;
                 const clubMaxSpeed = getClubMaxDistance() * (1 - FRICTION);
                 const maxPutterPower = clubMaxSpeed / 0.05625;
-                meterPower = Math.min(rawPower / maxPutterPower, 1);
+                meterPower = Math.min(curvedPower / maxPutterPower, 1);
             }
         }
 
@@ -2251,6 +2478,7 @@
         function shoot() {
             if (isMultiplayer && !isMyTurn) return;
             if (djOverlayOpen) return;
+            tutorialCheckShot();
             if (document.getElementById('completionMessage').classList.contains('show')) return;
             if (document.getElementById('mpScorecardOverlay').style.display !== 'none') return;
             const dx = dragStartX - dragEndX;
@@ -2287,6 +2515,9 @@
                     ? (targetDrag * cameraZoom) / (MAX_POWER * 0.67) // putter needs less range
                     : (targetDrag * cameraZoom) / MAX_POWER;
                 power = Math.min((distance * cameraZoom) / dragDivisor, MAX_POWER);
+                // Apply ease-in curve: gentle putts are more forgiving
+                const normalizedShotPower = power / MAX_POWER;
+                power = Math.pow(normalizedShotPower, POWER_CURVE_EXPONENT) * MAX_POWER;
                 const maxClubSpeed = getClubMaxDistance() * (1 - FRICTION);
                 const maxClubPower = maxClubSpeed / 0.05625;
                 meterPower = Math.min(power / maxClubPower, 1); // Update visual bar
@@ -2629,6 +2860,7 @@
                 const progress = Math.min(shotCumulativeDistance / shotExpectedDistance, 1);
                 if (selectedClub === 'putter') {
                     ball.displayRadius = BALL_BASE_RADIUS; // No scaling for putter
+                    ball.flightScale = 0;
                 } else {
                     const peakMultiplier = selectedClub === 'driver' ? 1.5 : 1.0;
                     let sizeScale;
@@ -2643,6 +2875,7 @@
                         sizeScale = 0;
                     }
                     ball.displayRadius = BALL_BASE_RADIUS * (1 + peakMultiplier * sizeScale);
+                    ball.flightScale = sizeScale;
                 }
             }
 
@@ -2731,6 +2964,7 @@
                 frozenPower = null;
                 frozenSwag = null;
                 ball.displayRadius = BALL_BASE_RADIUS;
+                ball.flightScale = 0;
                 shotBendActive = false;
 
                 // Multiplayer: restore my state if replaying opponent
@@ -2771,6 +3005,7 @@
                 frozenPower = null;
                 frozenSwag = null;
                 ball.displayRadius = BALL_BASE_RADIUS;
+                ball.flightScale = 0;
                 shotBendActive = false;
 
                 // Multiplayer: restore my state if replaying opponent shot
@@ -2803,10 +3038,11 @@
                         ball.x = currentHole.holePos.x;
                         ball.y = currentHole.holePos.y;
                         const underPar = Math.max(0, currentHole.par - strokes);
+                        const mpCoinsEarned = strokes <= currentHole.par ? 1 + underPar : 0;
                         spawnHoleFireworks(ball.x, ball.y, underPar);
                         shotSummaryMessages.push('HOLED!');
-                        if (underPar > 0) {
-                            showPowerupFeedback(`+${underPar} BS Coin${underPar > 1 ? 's' : ''}!`, ball.x, ball.y - 25, 300);
+                        if (mpCoinsEarned > 0) {
+                            showPowerupFeedback(`+${mpCoinsEarned} BS Coin${mpCoinsEarned > 1 ? 's' : ''}!`, ball.x, ball.y - 25, 300);
                         }
                     }
                     golfer.isFixed = false;
@@ -3058,10 +3294,11 @@
                 ball.x = currentHole.holePos.x;
                 ball.y = currentHole.holePos.y;
                 const underPar = Math.max(0, currentHole.par - strokes);
+                const coinsEarned = strokes <= currentHole.par ? 1 + underPar : 0;
                 spawnHoleFireworks(ball.x, ball.y, underPar);
                 shotSummaryMessages.push('HOLED!');
-                if (underPar > 0) {
-                    showPowerupFeedback(`+${underPar} BS Coin${underPar > 1 ? 's' : ''}!`, ball.x, ball.y - 25, 300);
+                if (coinsEarned > 0) {
+                    showPowerupFeedback(`+${coinsEarned} BS Coin${coinsEarned > 1 ? 's' : ''}!`, ball.x, ball.y - 25, 300);
                 }
                 finalizeShotSummary();
                 showCompletion();
@@ -3102,10 +3339,10 @@
                 summaryDiv.style.display = 'none';
             }
 
-            // Award bottom shelf coins (1 per stroke under par)
+            // Award bottom shelf coins: 1 for par, +1 per stroke under par
             const coinsDiv = document.getElementById('completionCoins');
-            if (diff < 0 && playerName) {
-                const earned = Math.abs(diff);
+            if (diff <= 0 && playerName) {
+                const earned = 1 + Math.abs(diff); // par=1, birdie=2, eagle=3, etc.
                 playerCoins += earned;
                 savePlayerData();
                 // Show coins earned
@@ -3260,6 +3497,7 @@
             displayBeers = shotBeersUsed;
             holeBeersTotal++;
             showPowerupFeedback('Glug', dragEndX || canvas.width / 2, dragEndY || canvas.height / 2);
+            tutorialCheckBeer();
         }
 
         function useWing() {
@@ -3270,6 +3508,7 @@
             displayCigs = shotCigsUsed;
             holeCigsTotal++;
             showPowerupFeedback('Chomp', dragEndX || canvas.width / 2, dragEndY || canvas.height / 2);
+            tutorialCheckWing();
         }
 
         const clubOrder = ['driver', 'iron', 'putter'];
@@ -3425,6 +3664,29 @@
         }
 
         function drawBall() {
+            // Flight shadow — offset toward bottom-right (sun from top-left)
+            // Only visible when ball is airborne (flightScale > 0)
+            if (ball.flightScale > 0.01 && ballMoving) {
+                const maxOffset = selectedClub === 'driver' ? 18 : 12;
+                const shadowOffsetX = ball.flightScale * maxOffset;  // right
+                const shadowOffsetY = ball.flightScale * maxOffset;  // down
+                const shadowRadius = BALL_BASE_RADIUS * (1 + ball.flightScale * 0.3);
+                const shadowAlpha = 0.15 + ball.flightScale * 0.2; // darker at peak
+                ctx.save();
+                ctx.fillStyle = `rgba(0, 0, 0, ${shadowAlpha})`;
+                ctx.beginPath();
+                // Ellipse: wider than tall to simulate ground shadow
+                ctx.ellipse(
+                    ball.x + shadowOffsetX,
+                    ball.y + shadowOffsetY,
+                    shadowRadius * 1.2,
+                    shadowRadius * 0.7,
+                    0, 0, Math.PI * 2
+                );
+                ctx.fill();
+                ctx.restore();
+            }
+
             // Pulsating yellow glow around ball (always visible, helps locate ball)
             if (!replayingOpponentShot) {
                 const glowPulse = 0.4 + 0.6 * Math.sin(Date.now() * 0.004);
@@ -4442,7 +4704,10 @@
                 const maxVisibleDrag = Math.min(CANVAS_WIDTH, CANVAS_HEIGHT) / (2 * cameraZoom);
                 const targetDrag = maxVisibleDrag * 0.6;
                 const putterDivisor = (targetDrag * cameraZoom) / (MAX_POWER * 0.67);
-                power = Math.min((dist * cameraZoom) / putterDivisor, MAX_POWER);
+                const rawPreviewPower = Math.min((dist * cameraZoom) / putterDivisor, MAX_POWER);
+                // Apply same ease-in curve as shot execution
+                const normalizedPreviewPower = rawPreviewPower / MAX_POWER;
+                power = Math.pow(normalizedPreviewPower, POWER_CURVE_EXPONENT) * MAX_POWER;
             } else {
                 power = MAX_POWER * meterPower;
             }
@@ -5359,11 +5624,11 @@
             };
             currentLobby.child('game/playerStates/' + mySlot).update(stateUpdate);
 
-            // Award coins if holed out under par
+            // Award coins if holed: 1 for par, +1 per stroke under par
             if (holedOut && playerName) {
                 const diff = strokes - currentHole.par;
-                if (diff < 0) {
-                    const earned = Math.abs(diff);
+                if (diff <= 0) {
+                    const earned = 1 + Math.abs(diff); // par=1, birdie=2, eagle=3
                     playerCoins += earned;
                     savePlayerData();
                     document.getElementById('coinBalanceValue').textContent = playerCoins;
@@ -5682,6 +5947,243 @@
             mySlot = null;
             lobbyPlayers = {};
             turnOrder = [];
+        }
+
+        // ==================== TUTORIAL SYSTEM ====================
+        const tutorial = {
+            active: false,
+            step: 0,
+            completed: localStorage.getItem('bsgTutorialDone') === 'true',
+            overlay: null,
+            waitingFor: null,  // what action advances to next step
+            shotFired: false,  // track if player has shot during tutorial
+        };
+
+        const TUTORIAL_STEPS = [
+            {
+                text: "Welcome to Bottom Shelf Golf! Let's learn the basics.<br><br><b>Tap the ball</b> to start aiming.",
+                waitFor: 'ballTap',
+                popupPosition: 'top',  // popup goes above center
+                spotlight: 'ball',
+            },
+            {
+                text: "Great! Now <b>drag away</b> from the hole to set your aim.<br>The further you drag, the harder you putt.",
+                waitFor: 'drag',
+                popupPosition: 'top',
+                spotlight: null,
+            },
+            {
+                text: "See the <b>dotted line</b>? That's your aim path.<br>The power meter on the right shows how hard you'll hit.<br><br><b>Release to putt!</b>",
+                waitFor: 'shot',
+                popupPosition: 'top',
+                spotlight: null,
+            },
+            {
+                text: "Nice swing! See how the ball followed a wobbly path?<br>That's the <b>fun meter</b> at work.<br>More fun = more wobble.",
+                waitFor: 'auto',
+                autoDelay: 2500,
+                popupPosition: 'center',
+                spotlight: null,
+            },
+            {
+                text: "Tap the <b>🍺 Beer</b> to crank up the fun meter.<br>More wobble can help curve around obstacles!",
+                waitFor: 'beerTap',
+                popupPosition: 'top',
+                spotlight: 'beer',
+            },
+            {
+                text: "Now tap the <b>🚬 Marlboro</b> to bring the wobble back down.<br>Use both to dial in the perfect curve.",
+                waitFor: 'wingTap',
+                popupPosition: 'top',
+                spotlight: 'wing',
+            },
+            {
+                text: "Try the <b>fine-tune buttons</b> above the course for precise wobble control.<br>Tap any one now.",
+                waitFor: 'fineTune',
+                popupPosition: 'center',
+                spotlight: 'windButtons',
+            },
+            {
+                text: "You're ready! 🏌️<br><br>Sink the ball in the <b>hole</b> to complete each course.<br>Par is your target — fewer strokes is better.<br><br><b>Go for it!</b>",
+                waitFor: 'tap',
+                popupPosition: 'center',
+                spotlight: null,
+            },
+        ];
+
+        function startTutorial() {
+            tutorial.active = true;
+            tutorial.step = 0;
+            tutorial.shotFired = false;
+            showTutorialStep(0);
+        }
+
+        function showTutorialStep(stepIndex) {
+            // Remove existing overlay
+            if (tutorial.overlay) {
+                tutorial.overlay.remove();
+                tutorial.overlay = null;
+            }
+
+            if (stepIndex >= TUTORIAL_STEPS.length) {
+                endTutorial();
+                return;
+            }
+
+            tutorial.step = stepIndex;
+            const step = TUTORIAL_STEPS[stepIndex];
+            tutorial.waitingFor = step.waitFor;
+
+            const overlay = document.createElement('div');
+            overlay.className = 'tutorial-overlay';
+            overlay.id = 'tutorialOverlay';
+
+            // Dim background
+            const dim = document.createElement('div');
+            dim.className = 'tutorial-dim';
+            overlay.appendChild(dim);
+
+            // Spotlight element
+            if (step.spotlight) {
+                const spotEl = createSpotlight(step.spotlight);
+                if (spotEl) overlay.appendChild(spotEl);
+            }
+
+            // Popup
+            const popup = document.createElement('div');
+            popup.className = 'tutorial-popup';
+            if (step.popupPosition === 'top') {
+                popup.style.top = '60px';
+            } else {
+                popup.style.top = '50%';
+                popup.style.transform = 'translate(-50%, -50%)';
+            }
+
+            popup.innerHTML = `
+                <div class="tutorial-step-label">Step ${stepIndex + 1} of ${TUTORIAL_STEPS.length}</div>
+                <div class="tutorial-text">${step.text}</div>
+                ${step.waitFor === 'tap' || step.waitFor === 'auto' ? '<div class="tutorial-tap-hint">Tap to continue</div>' : ''}
+                <button class="tutorial-skip" onclick="endTutorial()">Skip Tutorial</button>
+            `;
+            overlay.appendChild(popup);
+
+            // Handle tap-to-advance and auto-advance steps
+            if (step.waitFor === 'tap') {
+                popup.addEventListener('click', (e) => {
+                    if (e.target.className !== 'tutorial-skip') advanceTutorial();
+                });
+            }
+            if (step.waitFor === 'auto') {
+                popup.addEventListener('click', (e) => {
+                    if (e.target.className !== 'tutorial-skip') advanceTutorial();
+                });
+                setTimeout(() => {
+                    if (tutorial.active && tutorial.step === stepIndex) {
+                        // Auto-advance but don't force — just enable tap
+                        const hint = popup.querySelector('.tutorial-tap-hint');
+                        if (hint) hint.textContent = '👆 Tap to continue';
+                    }
+                }, step.autoDelay || 2000);
+            }
+
+            // For action-based steps, let touches through to the game
+            if (['ballTap', 'drag', 'shot', 'beerTap', 'wingTap', 'fineTune'].includes(step.waitFor)) {
+                dim.style.pointerEvents = 'none';
+                overlay.style.pointerEvents = 'none';
+                popup.style.pointerEvents = 'auto';
+            }
+
+            document.body.appendChild(overlay);
+            tutorial.overlay = overlay;
+        }
+
+        function createSpotlight(target) {
+            const spot = document.createElement('div');
+            spot.className = 'tutorial-spotlight';
+
+            let rect;
+            if (target === 'ball') {
+                // Spotlight the canvas center area where ball typically is
+                const canvasEl = document.getElementById('golfCanvas');
+                if (!canvasEl) return null;
+                const cr = canvasEl.getBoundingClientRect();
+                // Approximate ball area — center-bottom of canvas
+                spot.style.left = (cr.left + cr.width / 2 - 40) + 'px';
+                spot.style.top = (cr.top + cr.height * 0.65 - 40) + 'px';
+                spot.style.width = '80px';
+                spot.style.height = '80px';
+                spot.style.borderRadius = '50%';
+            } else if (target === 'beer') {
+                rect = document.getElementById('beerBtn')?.getBoundingClientRect();
+            } else if (target === 'wing') {
+                rect = document.getElementById('wingBtn')?.getBoundingClientRect();
+            } else if (target === 'windButtons') {
+                rect = document.getElementById('windButtons')?.getBoundingClientRect();
+            }
+
+            if (rect) {
+                spot.style.left = (rect.left - 6) + 'px';
+                spot.style.top = (rect.top - 6) + 'px';
+                spot.style.width = (rect.width + 12) + 'px';
+                spot.style.height = (rect.height + 12) + 'px';
+            }
+
+            return spot;
+        }
+
+        function advanceTutorial() {
+            if (!tutorial.active) return;
+            showTutorialStep(tutorial.step + 1);
+        }
+
+        function endTutorial() {
+            tutorial.active = false;
+            tutorial.waitingFor = null;
+            if (tutorial.overlay) {
+                tutorial.overlay.remove();
+                tutorial.overlay = null;
+            }
+            localStorage.setItem('bsgTutorialDone', 'true');
+            tutorial.completed = true;
+        }
+
+        // Hook: call this from handleMouseDown when ball is tapped
+        function tutorialCheckBallTap() {
+            if (tutorial.active && tutorial.waitingFor === 'ballTap') {
+                setTimeout(() => advanceTutorial(), 200);
+            }
+        }
+
+        // Hook: call this from handleMouseMove when dragging
+        function tutorialCheckDrag() {
+            if (tutorial.active && tutorial.waitingFor === 'drag') {
+                setTimeout(() => advanceTutorial(), 600);
+            }
+        }
+
+        // Hook: call this from shoot()
+        function tutorialCheckShot() {
+            if (tutorial.active && tutorial.waitingFor === 'shot') {
+                tutorial.shotFired = true;
+                setTimeout(() => advanceTutorial(), 800);
+            }
+        }
+
+        // Hook: call from beer/wing button handlers
+        function tutorialCheckBeer() {
+            if (tutorial.active && tutorial.waitingFor === 'beerTap') {
+                setTimeout(() => advanceTutorial(), 300);
+            }
+        }
+        function tutorialCheckWing() {
+            if (tutorial.active && tutorial.waitingFor === 'wingTap') {
+                setTimeout(() => advanceTutorial(), 300);
+            }
+        }
+        function tutorialCheckFineTune() {
+            if (tutorial.active && tutorial.waitingFor === 'fineTune') {
+                setTimeout(() => advanceTutorial(), 300);
+            }
         }
 
         // ==================== START ====================

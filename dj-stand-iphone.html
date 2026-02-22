@@ -26,8 +26,8 @@
         const RED = '#cc3333';
         const BG = '#87CEEB';
 
-        // Custom Vertical Slider — label ON the handle
-        const VerticalSlider = ({ value, min, max, step, onChange, height, label, disabled }) => {
+        // Custom Vertical Slider — label ON the handle, optional gold default bar
+        const VerticalSlider = ({ value, min, max, step, onChange, height, label, disabled, defaultValue }) => {
             const trackRef = useRef(null);
             const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
 
@@ -76,6 +76,25 @@
                         onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientY); }}
                         onTouchStart={(e) => { e.preventDefault(); startDrag(e.touches[0].clientY); }}
                     >
+                        {/* Gold default reference bar */}
+                        {defaultValue !== undefined && (() => {
+                            const defPct = ((defaultValue - min) / (max - min)) * 100;
+                            return (
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: `${defPct}%`,
+                                    left: '50%',
+                                    transform: 'translate(-50%, 50%)',
+                                    width: 28,
+                                    height: 3,
+                                    background: '#FFD700',
+                                    borderRadius: 1,
+                                    pointerEvents: 'none',
+                                    boxShadow: '0 0 4px rgba(255,215,0,0.6)',
+                                    zIndex: 0
+                                }} />
+                            );
+                        })()}
                         {/* Handle with label */}
                         <div style={{
                             position: 'absolute',
@@ -147,6 +166,7 @@
             const speedRef = useRef(1.0);
             const isPlayingRef = useRef(false);
             const currentTrackIndexRef = useRef(-1);
+            const wasPlayingBeforeHiddenRef = useRef(false);
 
             // Fullscreen
             const [isFullscreen, setIsFullscreen] = useState(false);
@@ -193,6 +213,27 @@
                 const elapsed = audioContextRef.current.currentTime - contextStartTimeRef.current;
                 return playbackOffsetRef.current + elapsed * speedRef.current;
             };
+
+            // iOS silent-mode bypass: a tiny silent <audio> element played on first
+            // interaction switches the audio session from "ambient" to "playback",
+            // which ignores the mute switch. Must happen before AudioContext use.
+            useEffect(() => {
+                const silentUnlock = () => {
+                    // Tiny silent WAV (44 bytes) as base64 data URI
+                    const silentAudio = document.createElement('audio');
+                    silentAudio.setAttribute('playsinline', '');
+                    silentAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+                    silentAudio.play().catch(() => {});
+                    // Also resume AudioContext if suspended
+                    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+                        audioContextRef.current.resume();
+                    }
+                    document.removeEventListener('touchstart', silentUnlock);
+                    document.removeEventListener('click', silentUnlock);
+                };
+                document.addEventListener('touchstart', silentUnlock, { once: true });
+                document.addEventListener('click', silentUnlock, { once: true });
+            }, []);
 
             // Initialize Web Audio API — full chain
             useEffect(() => {
@@ -275,6 +316,15 @@
 
                 source.onended = () => {
                     if (sourceNodeRef.current === source) {
+                        // If tab is hidden, iOS Safari killed playback — don't auto-advance
+                        if (document.hidden) {
+                            const pos = getCurrentPosition();
+                            playbackOffsetRef.current = Math.min(pos, audioBufferRef.current ? audioBufferRef.current.duration : pos);
+                            wasPlayingBeforeHiddenRef.current = true;
+                            isPlayingRef.current = false;
+                            setIsPlaying(false);
+                            return;
+                        }
                         isPlayingRef.current = false;
                         setIsPlaying(false);
                         playbackOffsetRef.current = 0;
@@ -462,6 +512,49 @@
                 const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
                 document.addEventListener('fullscreenchange', onFsChange);
                 return () => document.removeEventListener('fullscreenchange', onFsChange);
+            }, []);
+
+            // Resume playback when returning from background (iOS Safari tab-switch fix)
+            useEffect(() => {
+                const onVisChange = () => {
+                    if (document.hidden) {
+                        // Tab going to background — save state
+                        if (isPlayingRef.current) {
+                            wasPlayingBeforeHiddenRef.current = true;
+                            playbackOffsetRef.current = getCurrentPosition();
+                        }
+                    } else {
+                        // Tab returning to foreground — resume AudioContext and restart
+                        const ctx = audioContextRef.current;
+                        if (ctx && ctx.state === 'suspended') {
+                            ctx.resume().then(() => {
+                                if (wasPlayingBeforeHiddenRef.current && audioBufferRef.current) {
+                                    wasPlayingBeforeHiddenRef.current = false;
+                                    // Clean up stale source node
+                                    if (sourceNodeRef.current) {
+                                        sourceNodeRef.current.onended = null;
+                                        try { sourceNodeRef.current.stop(); } catch(e) {}
+                                        try { sourceNodeRef.current.disconnect(); } catch(e) {}
+                                        sourceNodeRef.current = null;
+                                    }
+                                    startPlayback();
+                                }
+                            });
+                        } else if (wasPlayingBeforeHiddenRef.current && audioBufferRef.current) {
+                            // Context wasn't suspended but we were playing — restart
+                            wasPlayingBeforeHiddenRef.current = false;
+                            if (sourceNodeRef.current) {
+                                sourceNodeRef.current.onended = null;
+                                try { sourceNodeRef.current.stop(); } catch(e) {}
+                                try { sourceNodeRef.current.disconnect(); } catch(e) {}
+                                sourceNodeRef.current = null;
+                            }
+                            startPlayback();
+                        }
+                    }
+                };
+                document.addEventListener('visibilitychange', onVisChange);
+                return () => document.removeEventListener('visibilitychange', onVisChange);
             }, []);
 
             // postMessage listener
@@ -758,25 +851,25 @@
                                             value={lpf} min={0} max={100} step={1}
                                             onChange={(v) => !gameMode && setLpfDirect(v)}
                                             height={smallH} label="LPF"
-                                            disabled={gameMode}
+                                            disabled={gameMode} defaultValue={100}
                                         />
                                         <VerticalSlider
                                             value={reverb} min={0} max={100} step={1}
                                             onChange={(v) => !gameMode && setReverbDirect(v)}
                                             height={smallH} label="Verb"
-                                            disabled={gameMode}
+                                            disabled={gameMode} defaultValue={0}
                                         />
                                         <VerticalSlider
                                             value={distortion} min={0} max={100} step={1}
                                             onChange={(v) => !gameMode && setDistortionDirect(v)}
                                             height={smallH} label="Dirt"
-                                            disabled={gameMode}
+                                            disabled={gameMode} defaultValue={0}
                                         />
                                         <VerticalSlider
                                             value={masterVol} min={0} max={100} step={1}
                                             onChange={(v) => setMasterDirect(v)}
                                             height={smallH} label="MSTR"
-                                            disabled={false}
+                                            disabled={false} defaultValue={80}
                                         />
                                     </div>
                                 </div>
@@ -786,7 +879,7 @@
                                     min={0} max={100} step={1}
                                     onChange={(v) => !gameMode && setFunDirect(v)}
                                     height={funH} label="FUN"
-                                    disabled={gameMode}
+                                    disabled={gameMode} defaultValue={50}
                                 />
                             </div>
                         )}

@@ -694,6 +694,18 @@
             <button class="mode-btn" id="playModeBackBtn" style="font-size: 14px; padding: 6px 16px; margin-top: 10px;">BACK</button>
         </div>
 
+        <!-- Course Selection -->
+        <div id="courseSelect" style="display:none; text-align:center;">
+            <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 24px; color: #FFD700; margin-bottom: 20px;">
+                SELECT COURSE
+            </div>
+            <div class="mode-select" style="flex-direction: column; gap: 15px;">
+                <button class="mode-btn mode-btn-play" id="courseHumbleBtn" style="font-size: 20px; width: 260px;">HUMBLE BEGINNINGS</button>
+                <button class="mode-btn" id="courseComingSoonBtn" style="font-size: 18px; width: 260px; opacity: 0.4; cursor: not-allowed; border-color: #888; color: #888;">COMING SOON</button>
+            </div>
+            <button class="mode-btn" id="courseBackBtn" style="font-size: 14px; padding: 6px 16px; margin-top: 15px;">BACK</button>
+        </div>
+
         <!-- Player Name Entry (main menu, optional) -->
         <div id="mainNameEntry" style="margin-top: 20px; text-align: center;">
             <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: #FFD700; margin-bottom: 8px;">
@@ -1510,7 +1522,7 @@
                 document.getElementById('playerInfo').style.display = 'none';
                 document.getElementById('nameEntry').style.display = 'none';
                 document.getElementById('proShopScreen').style.display = 'none';
-                document.getElementById('holeGrid').style.display = 'flex';
+                document.getElementById('courseSelect').style.display = 'block';
             });
 
             document.getElementById('playBtn2').addEventListener('click', () => {
@@ -1524,12 +1536,7 @@
             document.getElementById('soloPlayBtn').addEventListener('click', () => {
                 gameMode = 'play';
                 document.getElementById('playModeSelect').style.display = 'none';
-                if (playerName) {
-                    startHole(0);
-                } else {
-                    document.getElementById('nameEntry').style.display = 'flex';
-                    document.getElementById('playerNameInput').focus();
-                }
+                document.getElementById('courseSelect').style.display = 'block';
             });
 
             document.getElementById('playModeBackBtn').addEventListener('click', () => {
@@ -1586,6 +1593,40 @@
                 } else {
                     document.getElementById('mainNameEntry').style.display = 'block';
                     document.getElementById('playerInfo').style.display = 'none';
+                }
+            });
+
+            // Course selection handlers
+            document.getElementById('courseHumbleBtn').addEventListener('click', () => {
+                document.getElementById('courseSelect').style.display = 'none';
+                if (gameMode === 'practice') {
+                    document.getElementById('holeGrid').style.display = 'flex';
+                } else {
+                    if (playerName) {
+                        startHole(0);
+                    } else {
+                        document.getElementById('nameEntry').style.display = 'flex';
+                        document.getElementById('playerNameInput').focus();
+                    }
+                }
+            });
+
+            document.getElementById('courseComingSoonBtn').addEventListener('click', () => {
+                // Disabled — placeholder for future course
+            });
+
+            document.getElementById('courseBackBtn').addEventListener('click', () => {
+                document.getElementById('courseSelect').style.display = 'none';
+                if (gameMode === 'practice') {
+                    document.getElementById('modeSelect').style.display = 'flex';
+                    if (playerName) {
+                        document.getElementById('mainNameEntry').style.display = 'none';
+                        document.getElementById('playerInfo').style.display = 'block';
+                    } else {
+                        document.getElementById('mainNameEntry').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('playModeSelect').style.display = 'block';
                 }
             });
         }

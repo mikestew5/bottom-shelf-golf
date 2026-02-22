@@ -8,7 +8,7 @@
     <!-- Link Preview (iMessage / social) -->
     <meta property="og:title" content="Bottom Shelf Golf">
     <meta property="og:description" content="Wobbly putt-putt with the boys">
-    <meta property="og:image" content="https://mikestew5.github.io/bottom-shelf-golf/bsgheader.png">
+    <meta property="og:image" content="https://mikestew5.github.io/bottom-shelf-golf/assets/images/bsgheader.png">
     <meta property="og:url" content="https://mikestew5.github.io/bottom-shelf-golf/bottom_shelf_golf_iphone.html">
     <meta property="og:type" content="website">
 
@@ -685,7 +685,7 @@
         <div class="start-title">
             <!--🏌️ WOBBLY PUTT-PUTT 🏌️-->
         </div>
-        <img src="bsgheader.png" alt="Bottom Shelf Golf" style="max-width: 300px; width: 80vw; object-fit: contain;">
+        <img src="assets/images/bsgheader.png" alt="Bottom Shelf Golf" style="max-width: 300px; width: 80vw; object-fit: contain;">
 
         <!-- Mode Selection -->
         <div id="modeSelect" class="mode-select">
@@ -983,14 +983,14 @@
         <!-- Bottom bar (wing, club, beer) -->
         <div class="game-bottom-bar">
             <div class="overlay-btn" id="wingBtn">
-                <div class="overlay-btn-icon"><img src="marlboro.png" style="width:50px;height:50px;object-fit:contain;"></div>
+                <div class="overlay-btn-icon"><img src="assets/images/marlboro.png" style="width:50px;height:50px;object-fit:contain;"></div>
             </div>
             <div class="overlay-btn" id="clubBtn" style="background:#c8a200; border-color:#9a7d00;">
                 <div class="overlay-btn-icon" style="font-size:36px;">🏌️</div>
                 <div class="overlay-btn-label" style="color:#000;">DRIVER</div>
             </div>
             <div class="overlay-btn" id="beerBtn">
-                <div class="overlay-btn-icon"><img src="budweiser.png" style="width:50px;height:50px;object-fit:contain;"></div>
+                <div class="overlay-btn-icon"><img src="assets/images/budweiser.png" style="width:50px;height:50px;object-fit:contain;"></div>
             </div>
         </div>
 
@@ -1042,32 +1042,32 @@
         }
 
         const holes = [
-            { id: 1, name: 'HOLE 1', par: 4, image: '1sthole.png', ballStart: imgToCanvas(145, 229), holePos: imgToCanvas(153, 26) },
-            { id: 2, name: 'HOLE 2', par: 4, image: '2ndhole.png', ballStart: imgToCanvas(95, 236), holePos: imgToCanvas(113, 33) },
-            { id: 3, name: 'HOLE 3', par: 4, image: '3rdhole.png', ballStart: imgToCanvas(96, 241), holePos: imgToCanvas(109, 24) },
-            { id: 4, name: 'HOLE 4', par: 4, image: '4thhole.png', ballStart: imgToCanvas(138, 215), holePos: imgToCanvas(162, 23) },
-            { id: 18, name: 'HOLE 18', par: 4, image: '18thhole.png', ballStart: imgToCanvas(133, 219), holePos: imgToCanvas(146, 23) }
+            { id: 1, name: 'HOLE 1', par: 4, image: 'assets/holes/1sthole.png', ballStart: imgToCanvas(145, 229), holePos: imgToCanvas(153, 26) },
+            { id: 2, name: 'HOLE 2', par: 4, image: 'assets/holes/2ndhole.png', ballStart: imgToCanvas(95, 236), holePos: imgToCanvas(113, 33) },
+            { id: 3, name: 'HOLE 3', par: 4, image: 'assets/holes/3rdhole.png', ballStart: imgToCanvas(96, 241), holePos: imgToCanvas(109, 24) },
+            { id: 4, name: 'HOLE 4', par: 4, image: 'assets/holes/4thhole.png', ballStart: imgToCanvas(138, 215), holePos: imgToCanvas(162, 23) },
+            { id: 18, name: 'HOLE 18', par: 4, image: 'assets/holes/18thhole.png', ballStart: imgToCanvas(133, 219), holePos: imgToCanvas(146, 23) }
         ];
 
         // Music tracks (Bottom Shelf playlist)
         const songs = [
-            { title: "Time", file: "timemix.m4a" },
-            { title: "Memphis", file: "newmemphismix.m4a" },
-            { title: "Yellow Pine", file: "YELLOPINEMIX.m4a" },
-            { title: "Man In Me", file: "maninme817master2.m4a" },
-            { title: "Rainbow Spotted", file: "rainbowspottedskindregularmaster.m4a" },
-            { title: "LWYD", file: "lwydmasterearlynov.m4a" },
-            { title: "Mormon Wedding", file: "mymormonweddingmasterearlynov.m4a" },
-            { title: "Hurt My Shoulder", file: "hurtmyshouldermasterearlynov.m4a" },
-            { title: "Jumbotron", file: "jumbotronmasterearlynov.m4a" },
-            { title: "Something Ain't Right", file: "somethingaintrightmaster1114.m4a" },
-            { title: "I Bought A Bronco", file: "iboughtabroncomaster1114.m4a" },
-            { title: "Slow Low", file: "jtronslowlowmaster.m4a" },
-            { title: "Seeeekret", file: "jtronsseeeeeekretmaster.m4a" },
-            { title: "Carolina Curveball", file: "carolinacurveballroughmaster.m4a" },
-            { title: "Sure Is Cold", file: "sureiscoldroughmaster.m4a" },
-            { title: "U Don't & Wedding", file: "udont&weddingroughmaster.m4a" },
-            { title: "Divorce", file: "divorcedroughymaster.m4a" }
+            { title: "Time", file: "assets/music/timemix.m4a" },
+            { title: "Memphis", file: "assets/music/newmemphismix.m4a" },
+            { title: "Yellow Pine", file: "assets/music/YELLOPINEMIX.m4a" },
+            { title: "Man In Me", file: "assets/music/maninme817master2.m4a" },
+            { title: "Rainbow Spotted", file: "assets/music/rainbowspottedskindregularmaster.m4a" },
+            { title: "LWYD", file: "assets/music/lwydmasterearlynov.m4a" },
+            { title: "Mormon Wedding", file: "assets/music/mymormonweddingmasterearlynov.m4a" },
+            { title: "Hurt My Shoulder", file: "assets/music/hurtmyshouldermasterearlynov.m4a" },
+            { title: "Jumbotron", file: "assets/music/jumbotronmasterearlynov.m4a" },
+            { title: "Something Ain't Right", file: "assets/music/somethingaintrightmaster1114.m4a" },
+            { title: "I Bought A Bronco", file: "assets/music/iboughtabroncomaster1114.m4a" },
+            { title: "Slow Low", file: "assets/music/jtronslowlowmaster.m4a" },
+            { title: "Seeeekret", file: "assets/music/jtronsseeeeeekretmaster.m4a" },
+            { title: "Carolina Curveball", file: "assets/music/carolinacurveballroughmaster.m4a" },
+            { title: "Sure Is Cold", file: "assets/music/sureiscoldroughmaster.m4a" },
+            { title: "U Don't & Wedding", file: "assets/music/udont&weddingroughmaster.m4a" },
+            { title: "Divorce", file: "assets/music/divorcedroughymaster.m4a" }
         ];
 
         // ==================== GAME STATE ====================
@@ -1129,8 +1129,8 @@
         const PAR4_HOLE_FT = 650;          // Tuned tee-to-hole distance for realistic shot stats
 
         // Beer/cig images for summary box
-        const beerImg = new Image(); beerImg.src = 'budweiser.png';
-        const cigImg = new Image(); cigImg.src = 'marlboro.png';
+        const beerImg = new Image(); beerImg.src = 'assets/images/budweiser.png';
+        const cigImg = new Image(); cigImg.src = 'assets/images/marlboro.png';
 
         // Multiplayer chat box
         let mpChatMessages = []; // { text, time }

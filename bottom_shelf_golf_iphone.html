@@ -653,20 +653,17 @@
 
         #djCloseBtn {
             position: absolute;
-            top: 6px;
-            right: 6px;
-            background: rgba(60, 60, 60, 0.8);
-            border: 2px solid #888;
-            border-radius: 50%;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
             color: #fff;
-            width: 36px;
-            height: 36px;
-            font-size: 18px;
+            font-size: 48px;
+            font-weight: 900;
             cursor: pointer;
             z-index: 510;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            line-height: 1;
+            text-shadow: 0 0 8px rgba(0,0,0,0.8);
         }
 
         .dj-frame-wrapper {
@@ -986,7 +983,7 @@
 
     <!-- DJ Stand Overlay -->
     <div id="djOverlay">
-        <button id="djCloseBtn">&times;</button>
+        <button id="djCloseBtn">X</button>
         <div class="dj-frame-wrapper">
             <iframe id="djStandFrame" src="dj-stand-iphone.html" allow="autoplay; fullscreen"></iframe>
         </div>
@@ -1075,6 +1072,32 @@
         let shotTotalBendAngle = 0;
         let shotBendActive = false;
         let shotPrevT = 0; // Track previous t for incremental angle
+
+        // Shot summary & stats
+        let shotSummaryMessages = [];
+        let shotSummaryVisible = false;
+        let shotBeersUsed = 0;
+        let shotCigsUsed = 0;
+        let displayBeers = 0;
+        let displayCigs = 0;
+        let frozenStatSpeed = 0;      // mph
+        let frozenStatDistance = 0;    // feet (updated live)
+        let frozenStatAirTime = 0;    // seconds
+        let frozenStatSwag = 0;       // percentage 0-100
+        let frozenStatClub = '';
+        let shotStatsVisible = false;
+
+        // Realistic stat constants
+        const CLUB_AIR_TIME = { driver: 6.0, iron: 4.5, putter: 0 };
+        const MPH_PER_PX_FRAME = 30.22;  // 170 mph / 5.625 px/frame (full power driver)
+        const FEET_PER_PX = 2.4;          // 900 ft / 375 px (full power driver distance)
+
+        // Beer/cig images for summary box
+        const beerImg = new Image(); beerImg.src = 'budweiser.png';
+        const cigImg = new Image(); cigImg.src = 'marlboro.png';
+
+        // Multiplayer chat box
+        let mpChatMessages = []; // { text, time }
 
         // Post-shot spin state
         let isSpinDragging = false;
@@ -2248,13 +2271,28 @@
 
             // BOOM popup on full-power driver tee shot
             if (selectedClub === 'driver' && isTeeShotActive && meterPower >= 0.95) {
-                showPowerupFeedback('💥', ball.x, ball.y, 120);
+                showPowerupFeedback('BOOM!', ball.x, ball.y, 120);
             }
 
             // Freeze predictor path and meters before ball starts moving
             frozenPredictorPoints = computePredictorPoints();
             frozenPower = meterPower;
             frozenSwag = getSwagPct();
+
+            // Freeze shot summary & stats
+            shotSummaryMessages = [];
+            displayBeers = shotBeersUsed;
+            displayCigs = shotCigsUsed;
+            shotBeersUsed = 0;
+            shotCigsUsed = 0;
+            shotSummaryVisible = false;
+            shotStatsVisible = true;
+            const initialSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+            frozenStatSpeed = initialSpeed * MPH_PER_PX_FRAME;
+            frozenStatAirTime = CLUB_AIR_TIME[selectedClub] * Math.sqrt(meterPower);
+            frozenStatSwag = Math.round(getSwagPct() * 100);
+            frozenStatClub = selectedClub;
+            frozenStatDistance = 0;
 
             ballMoving = true;
             isTeeShotActive = false;
@@ -2580,7 +2618,7 @@
                     shotBendActive = false;
                     if (isAscending) treeBounceAscending = true;
                     else treeBounceDescending = true;
-                    showPowerupFeedback('🌳 WHACK!', ball.x, ball.y - 20);
+                    showPowerupFeedback('WHACK!', ball.x, ball.y - 20);
                 }
 
                 // Tree drag: slow ball through canopy even without bounce
@@ -2632,10 +2670,12 @@
                 golfer.isFixed = false;
                 if (isMultiplayer && isMyTurn) {
                     checkWaterHazard();
+                    finalizeShotSummary();
                     onMpShotComplete();
                     return;
                 }
                 checkWaterHazard();
+                finalizeShotSummary();
                 return;
             }
 
@@ -2682,11 +2722,13 @@
                         ball.y = currentHole.holePos.y;
                         const underPar = Math.max(0, currentHole.par - strokes);
                         spawnHoleFireworks(ball.x, ball.y, underPar);
+                        shotSummaryMessages.push('HOLED!');
                         if (underPar > 0) {
                             showPowerupFeedback(`+${underPar} BS Coin${underPar > 1 ? 's' : ''}!`, ball.x, ball.y - 25, 300);
                         }
                     }
                     golfer.isFixed = false;
+                    finalizeShotSummary();
                     onMpShotComplete();
                     return;
                 }
@@ -2700,6 +2742,7 @@
                 // Check hazards
                 checkWaterHazard();
                 checkWhiteHazard();
+                finalizeShotSummary();
             }
         }
 
@@ -2797,7 +2840,7 @@
                 // Add penalty stroke
                 strokes++;
                 updateScorePanel();
-                showPowerupFeedback('💧 WATER! +1 Stroke', ball.x, ball.y - 30);
+                showPowerupFeedback('WATER +1 Stroke', ball.x, ball.y - 30);
             }
         }
 
@@ -2845,7 +2888,7 @@
                 strokes++;
                 foulHighlightTimer = 180; // ~3 seconds at 60fps
                 updateScorePanel();
-                showPowerupFeedback('⛳ OUT OF BOUNDS! +1 Stroke', ball.x, ball.y - 30);
+                showPowerupFeedback('OUT OF BOUNDS +1', ball.x, ball.y - 30);
             }
         }
 
@@ -2934,9 +2977,11 @@
                 ball.y = currentHole.holePos.y;
                 const underPar = Math.max(0, currentHole.par - strokes);
                 spawnHoleFireworks(ball.x, ball.y, underPar);
+                shotSummaryMessages.push('HOLED!');
                 if (underPar > 0) {
                     showPowerupFeedback(`+${underPar} BS Coin${underPar > 1 ? 's' : ''}!`, ball.x, ball.y - 25, 300);
                 }
+                finalizeShotSummary();
                 showCompletion();
                 return true;
             }
@@ -3114,14 +3159,16 @@
             if (isMultiplayer && !isMyTurn) return;
             if (ballMoving) return;
             bendMeter = Math.min(5, bendMeter + 1);
-            showPowerupFeedback('🍺 glug', dragEndX || canvas.width / 2, dragEndY || canvas.height / 2);
+            shotBeersUsed++;
+            showPowerupFeedback('Glug', dragEndX || canvas.width / 2, dragEndY || canvas.height / 2);
         }
 
         function useWing() {
             if (isMultiplayer && !isMyTurn) return;
             if (ballMoving) return;
             bendMeter = Math.max(-5, bendMeter - 1);
-            showPowerupFeedback('🍗 chomp', dragEndX || canvas.width / 2, dragEndY || canvas.height / 2);
+            shotCigsUsed++;
+            showPowerupFeedback('Chomp', dragEndX || canvas.width / 2, dragEndY || canvas.height / 2);
         }
 
         const clubOrder = ['driver', 'iron', 'putter'];
@@ -3143,6 +3190,16 @@
         }
 
         function showPowerupFeedback(text, x, y, frames, extraClass) {
+            // Collect into shot summary (skip MP reactions and powerup use messages)
+            if (extraClass !== 'mp-reaction' && !replayingOpponentShot && text !== 'Glug' && text !== 'Chomp') {
+                shotSummaryMessages.push(text);
+            }
+            // Collect MP reactions into chat box
+            if (extraClass === 'mp-reaction') {
+                mpChatMessages.push({ text, time: Date.now() });
+                if (mpChatMessages.length > 5) mpChatMessages.shift();
+            }
+
             const rect = canvas.getBoundingClientRect();
             const scaleX = rect.width / CANVAS_WIDTH;
             const scaleY = rect.height / CANVAS_HEIGHT;
@@ -3437,6 +3494,52 @@
             ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 2;
             ctx.stroke();
+            ctx.restore();
+
+            // Flag pole and waving flag
+            const hx = currentHole.holePos.x;
+            const hy = currentHole.holePos.y;
+            const poleH = 50;
+            const t = Date.now() * 0.003;
+
+            ctx.save();
+            // Pole
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(hx, hy);
+            ctx.lineTo(hx, hy - poleH);
+            ctx.stroke();
+
+            // Waving flag (triangle with sine wave distortion)
+            ctx.fillStyle = '#cc3333';
+            ctx.beginPath();
+            ctx.moveTo(hx, hy - poleH);
+            const flagW = 22;
+            const flagH = 14;
+            const segments = 8;
+            // Top edge (waves)
+            for (let i = 0; i <= segments; i++) {
+                const frac = i / segments;
+                const fx = hx + frac * flagW;
+                const wave = Math.sin(t + frac * 4) * 2 * frac;
+                ctx.lineTo(fx, hy - poleH + wave);
+            }
+            // Bottom edge (waves back)
+            for (let i = segments; i >= 0; i--) {
+                const frac = i / segments;
+                const fx = hx + frac * flagW;
+                const wave = Math.sin(t + frac * 4 + 0.5) * 2 * frac;
+                ctx.lineTo(fx, hy - poleH + flagH + wave);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Pole ball on top
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(hx, hy - poleH, 2.5, 0, Math.PI * 2);
+            ctx.fill();
             ctx.restore();
         }
 
@@ -3887,6 +3990,158 @@
             ctx.restore();
         }
 
+        // ==================== SHOT SUMMARY BOX (under predictor, left side) ====================
+        function drawShotSummary() {
+            if (!shotSummaryVisible || replayingOpponentShot) return;
+            if (shotSummaryMessages.length === 0 && displayBeers === 0 && displayCigs === 0) return;
+
+            const BOX_X = PREDICTOR_X - 2;
+            const BOX_Y = PREDICTOR_Y + PREDICTOR_H + 8;
+            const BOX_W = (SWAG_X + SWAG_W) - PREDICTOR_X + 4;
+            const LINE_H = 16;
+            const iconRowH = (displayBeers > 0 || displayCigs > 0) ? 28 : 0;
+            const BOX_H = Math.max(36, shotSummaryMessages.length * LINE_H + iconRowH + 12);
+
+            ctx.save();
+            // Background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+
+            // Bold black text messages
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'left';
+            shotSummaryMessages.forEach((msg, i) => {
+                ctx.fillText(msg, BOX_X + 6, BOX_Y + 14 + i * LINE_H, BOX_W - 12);
+            });
+
+            // Beer/cig icons
+            const iconY = BOX_Y + 6 + shotSummaryMessages.length * LINE_H;
+            let iconX = BOX_X + 6;
+            if (displayBeers > 0 && beerImg.complete) {
+                for (let i = 0; i < displayBeers; i++) {
+                    ctx.drawImage(beerImg, iconX + i * 22, iconY, 20, 20);
+                }
+                iconX += displayBeers * 22 + 4;
+            }
+            if (displayCigs > 0 && cigImg.complete) {
+                for (let i = 0; i < displayCigs; i++) {
+                    ctx.drawImage(cigImg, iconX + i * 22, iconY, 20, 20);
+                }
+            }
+
+            ctx.restore();
+        }
+
+        // ==================== SHOT STATS WINDOW (right side) ====================
+        const STATS_X = CANVAS_WIDTH - PREDICTOR_X - PREDICTOR_W;
+        const STATS_Y = PREDICTOR_Y;
+        const STATS_W = PREDICTOR_W;
+        const STATS_H = 140;
+
+        function drawShotStats() {
+            if (!shotStatsVisible || replayingOpponentShot) return;
+
+            ctx.save();
+            // Background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(STATS_X, STATS_Y, STATS_W, STATS_H);
+            // Red border
+            ctx.strokeStyle = 'rgba(200, 50, 50, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(STATS_X, STATS_Y, STATS_W, STATS_H);
+
+            ctx.textAlign = 'left';
+            const x = STATS_X + 6;
+            let y = STATS_Y + 16;
+            const lineH = 22;
+
+            // Club name
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.fillText(frozenStatClub.toUpperCase(), x, y);
+            y += lineH;
+
+            // Ball speed
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(Math.round(frozenStatSpeed) + ' mph', x, y);
+            ctx.font = '8px sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillText('speed', x + 62, y);
+            y += lineH;
+
+            // Distance (live during flight)
+            const dist = ballMoving ? shotCumulativeDistance * FEET_PER_PX : frozenStatDistance;
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(Math.round(dist) + ' ft', x, y);
+            ctx.font = '8px sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillText('path', x + 62, y);
+            y += lineH;
+
+            // Air time
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(frozenStatAirTime.toFixed(1) + 's', x, y);
+            ctx.font = '8px sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillText('air', x + 62, y);
+            y += lineH;
+
+            // Swag %
+            ctx.fillStyle = '#00ffdc';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(frozenStatSwag + '%', x, y);
+            ctx.font = '8px sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillText('swag', x + 62, y);
+
+            ctx.restore();
+        }
+
+        function finalizeShotSummary() {
+            frozenStatDistance = shotCumulativeDistance * FEET_PER_PX;
+            shotSummaryVisible = true;
+        }
+
+        // ==================== MP CHAT BOX (bottom-right of canvas) ====================
+        function drawMpChat() {
+            if (!isMultiplayer) return;
+            // Expire messages older than 10 seconds
+            const now = Date.now();
+            mpChatMessages = mpChatMessages.filter(m => now - m.time < 10000);
+            if (mpChatMessages.length === 0) return;
+
+            const CHAT_W = 170;
+            const LINE_H = 16;
+            const CHAT_H = mpChatMessages.length * LINE_H + 10;
+            const CHAT_X = CANVAS_WIDTH - 10 - CHAT_W;
+            const CHAT_Y = CANVAS_HEIGHT - 10 - CHAT_H;
+
+            ctx.save();
+            // Background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fillRect(CHAT_X, CHAT_Y, CHAT_W, CHAT_H);
+            // Red border
+            ctx.strokeStyle = 'rgba(200, 50, 50, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(CHAT_X, CHAT_Y, CHAT_W, CHAT_H);
+
+            // Messages
+            ctx.fillStyle = '#000';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'left';
+            mpChatMessages.forEach((msg, i) => {
+                ctx.fillText(msg.text, CHAT_X + 6, CHAT_Y + 14 + i * LINE_H, CHAT_W - 12);
+            });
+            ctx.restore();
+        }
+
         function drawBendPreview() {
             if (!isDragging) return;
 
@@ -4039,6 +4294,9 @@
             drawPredictorPath();
             drawFunMeter();
             drawSwagMeter();
+            drawShotSummary();
+            drawShotStats();
+            drawMpChat();
 
             // Border area: predictor + fun meter + swag meter
             const borderX = PREDICTOR_X - 2;

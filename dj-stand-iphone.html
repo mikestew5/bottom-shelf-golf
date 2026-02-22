@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Roughest Demo Tapes 3</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; overflow-x: hidden; }
         @keyframes redPulse {
             0%, 100% { box-shadow: 0 0 4px rgba(200,50,50,0.3); }
             50% { box-shadow: 0 0 16px rgba(200,50,50,0.8), 0 0 24px rgba(200,50,50,0.3); }
@@ -24,51 +24,10 @@
 
         const FONT = "'Playfair Display', serif";
         const RED = '#cc3333';
-        const BG = '#99ccff';
+        const BG = '#87CEEB';
 
-        // SVG Icons (filled, no stroke for clean look)
-        const Play = ({ size = 24, color = "currentColor" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-        );
-        const Pause = ({ size = 24, color = "currentColor" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
-                <rect x="6" y="4" width="4" height="16"></rect>
-                <rect x="14" y="4" width="4" height="16"></rect>
-            </svg>
-        );
-        const SkipBack = ({ size = 24, color = "currentColor" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
-                <polygon points="19 20 9 12 19 4 19 20"></polygon>
-                <rect x="5" y="5" width="2" height="14"></rect>
-            </svg>
-        );
-        const SkipForward = ({ size = 24, color = "currentColor" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
-                <polygon points="5 4 15 12 5 20 5 4"></polygon>
-                <rect x="17" y="5" width="2" height="14"></rect>
-            </svg>
-        );
-        const Maximize = ({ size = 24, color = "currentColor" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
-                <polyline points="15 3 21 3 21 9"></polyline>
-                <polyline points="9 21 3 21 3 15"></polyline>
-                <line x1="21" y1="3" x2="14" y2="10"></line>
-                <line x1="3" y1="21" x2="10" y2="14"></line>
-            </svg>
-        );
-        const Minimize = ({ size = 24, color = "currentColor" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
-                <polyline points="4 14 10 14 10 20"></polyline>
-                <polyline points="20 10 14 10 14 4"></polyline>
-                <line x1="14" y1="10" x2="21" y2="3"></line>
-                <line x1="3" y1="21" x2="10" y2="14"></line>
-            </svg>
-        );
-
-        // Custom Vertical Slider
-        const VerticalSlider = ({ value, min, max, step, onChange, height, label, sublabel, display, disabled }) => {
+        // Custom Vertical Slider — label ON the handle
+        const VerticalSlider = ({ value, min, max, step, onChange, height, label, disabled }) => {
             const trackRef = useRef(null);
             const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
 
@@ -102,29 +61,41 @@
             };
 
             return (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <div style={{ fontSize: 11, color: RED, letterSpacing: 1, fontWeight: 700, fontFamily: FONT, textAlign: 'center' }}>{label}</div>
-                    {sublabel && <div style={{ fontSize: 8, color: '#444', letterSpacing: 1, fontFamily: FONT }}>{sublabel}</div>}
-                    <div style={{ fontSize: 12, color: '#222', fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>{display}</div>
+                <div style={{
+                    width: 60, height, position: 'relative',
+                    flexShrink: 0, flexGrow: 0
+                }}>
                     <div ref={trackRef}
                         style={{
-                            width: 4, height, background: '#000', position: 'relative',
+                            width: 4, height: '100%', background: '#000',
+                            position: 'absolute', left: '50%', top: 0,
+                            transform: 'translateX(-50%)',
                             cursor: disabled ? 'default' : 'pointer',
-                            opacity: disabled ? 0.4 : 1, touchAction: 'none'
+                            opacity: disabled ? 0.5 : 1, touchAction: 'none'
                         }}
                         onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientY); }}
                         onTouchStart={(e) => { e.preventDefault(); startDrag(e.touches[0].clientY); }}
                     >
+                        {/* Handle with label */}
                         <div style={{
                             position: 'absolute',
-                            bottom: `calc(${pct}% - 10px)`,
+                            bottom: `calc(${pct}% - 16px)`,
                             left: '50%',
                             transform: 'translateX(-50%)',
-                            width: 34, height: 18,
+                            width: 56, height: 32,
                             background: RED,
                             animation: disabled ? 'none' : 'redPulse 2s ease-in-out infinite',
-                            cursor: disabled ? 'default' : 'grab'
-                        }} />
+                            cursor: disabled ? 'default' : 'grab',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <span style={{
+                                color: '#000', fontSize: 13, fontWeight: 700,
+                                fontFamily: FONT, letterSpacing: 1,
+                                pointerEvents: 'none', userSelect: 'none'
+                            }}>{label}</span>
+                        </div>
                     </div>
                 </div>
             );
@@ -239,7 +210,6 @@
                 reverbDryGainRef.current = ctx.createGain();
                 reverbDryGainRef.current.gain.value = 1;
 
-                // Chain: Source -> LPF -> Distortion -> [Dry + Wet(Convolver)] -> Analyser -> Master Gain -> Out
                 lpfNodeRef.current.connect(distortionNodeRef.current);
                 distortionNodeRef.current.connect(reverbDryGainRef.current);
                 reverbDryGainRef.current.connect(analyserRef.current);
@@ -288,7 +258,6 @@
                 }
             }, [gameMode, gameFocus, gameFun]);
 
-            // Start playback from current offset
             const startPlayback = () => {
                 if (!audioBufferRef.current || !audioContextRef.current) return;
                 if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
@@ -317,7 +286,6 @@
                 drawWaveform();
             };
 
-            // Stop playback, save position
             const stopPlayback = () => {
                 if (sourceNodeRef.current) {
                     const pos = getCurrentPosition();
@@ -339,7 +307,6 @@
                 }
             };
 
-            // Load track via XHR (works from file:// protocol)
             const loadTrackByIndex = async (index, autoPlay = true) => {
                 if (index < 0 || index >= tracks.length) return;
                 stopPlayback();
@@ -377,7 +344,6 @@
                 }
             };
 
-            // Warm tube distortion curve
             const makeDistortionCurve = (amount) => {
                 const samples = 44100;
                 const curve = new Float32Array(samples);
@@ -387,8 +353,6 @@
                 }
                 return curve;
             };
-
-            // --- Control setters (sample-accurate, zero lag) ---
 
             const setSpeedDirect = (val) => {
                 if (isPlayingRef.current) {
@@ -428,7 +392,6 @@
                 if (gainNodeRef.current) gainNodeRef.current.gain.value = val / 100;
             };
 
-            // Draw waveform
             const drawWaveform = () => {
                 if (!analyserRef.current || !canvasRef.current) return;
                 const canvas = canvasRef.current;
@@ -479,7 +442,6 @@
                 setMasterDirect(80);
             };
 
-            // Fullscreen
             const toggleFullscreen = () => {
                 if (!document.fullscreenElement) document.documentElement.requestFullscreen();
                 else document.exitFullscreen();
@@ -518,11 +480,10 @@
                         } else {
                             setGameFocus(null);
                             setGameFun(null);
+                            // Preserve speed, LPF, and master when switching to free mix
                             if (data.resetDefaults) {
-                                setSpeedDirect(1.0);
                                 setDistortionDirect(0);
                                 setReverbDirect(0);
-                                setLpfDirect(100);
                             }
                         }
                         break;
@@ -545,159 +506,162 @@
                 return `${mins}:${secs.toString().padStart(2, '0')}`;
             };
 
-            // LPF display value
-            const lpfFreqVal = Math.round(lpfToFreq(lpf));
-            const lpfDisplay = lpfFreqVal >= 1000 ? `${(lpfFreqVal / 1000).toFixed(1)}k` : `${lpfFreqVal}`;
-
-            // Button style helper
-            const btnStyle = (enabled = true) => ({
-                background: RED,
-                border: 'none',
-                color: '#fff',
-                cursor: enabled ? 'pointer' : 'default',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: enabled ? 1 : 0.4,
-                animation: enabled ? 'redPulse 2s ease-in-out infinite' : 'none',
-                fontFamily: FONT,
-                fontWeight: 700,
-                letterSpacing: 1
-            });
-
             return (
                 <div style={{
                     minHeight: '100vh',
                     background: BG,
                     fontFamily: FONT,
-                    padding: '16px 12px',
+                    padding: '20px 16px',
                     color: '#222'
                 }}>
                     <div style={{ maxWidth: 400, margin: '0 auto' }}>
 
-                        {/* Header */}
-                        <div style={{ textAlign: 'center', marginBottom: 12, position: 'relative' }}>
-                            <div style={{ fontSize: 10, letterSpacing: 3, color: '#555', marginBottom: 2 }}>
-                                BOTTOM SHELF
-                            </div>
-                            <h1 style={{ fontSize: 20, fontWeight: 700, color: RED, margin: 0, letterSpacing: 1 }}>
-                                ROUGHEST DEMO TAPES 3
-                            </h1>
-                            <button onClick={toggleFullscreen} style={{
-                                position: 'absolute', top: 0, right: 0,
-                                background: 'none', border: `1px solid ${RED}`,
-                                padding: 6, cursor: 'pointer'
+                        {/* Title */}
+                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                            <h1 style={{
+                                fontSize: 28, fontWeight: 700, fontStyle: 'italic',
+                                color: '#000', margin: 0, lineHeight: 1.1
                             }}>
-                                {isFullscreen ? <Minimize size={14} color={RED} /> : <Maximize size={14} color={RED} />}
-                            </button>
+                                Roughest Demo<br/>Tapes 3
+                            </h1>
                         </div>
 
                         {/* Waveform */}
-                        <div style={{ background: '#000', padding: 6, marginBottom: 10 }}>
+                        <div style={{ background: '#000', padding: 4, marginBottom: 8 }}>
                             <canvas ref={canvasRef} width={836} height={50}
                                 style={{ width: '100%', height: 'auto', display: 'block' }} />
                         </div>
 
                         {/* Now Playing */}
                         {(trackLoaded || loading) && tracks[currentTrackIndex] && (
-                            <div style={{ textAlign: 'center', marginBottom: 10, padding: '6px 10px', background: 'rgba(0,0,0,0.08)' }}>
-                                <div style={{ fontSize: 9, color: '#555', letterSpacing: 2, marginBottom: 2 }}>
-                                    {loading ? 'LOADING...' : 'NOW PLAYING'}
-                                </div>
-                                <div style={{ fontSize: 14, color: RED, fontWeight: 700 }}>
-                                    {tracks[currentTrackIndex].name}
-                                </div>
-                                <div style={{ fontSize: 12, color: '#333', letterSpacing: 1, marginTop: 2 }}>
-                                    {formatTime(currentTime)} / {formatTime(duration)}
-                                </div>
+                            <div style={{ textAlign: 'center', marginBottom: 12, fontSize: 13, color: '#333' }}>
+                                <span style={{ color: RED, fontWeight: 700 }}>{tracks[currentTrackIndex].name}</span>
+                                {' '}{formatTime(currentTime)} / {formatTime(duration)}
                             </div>
                         )}
 
-                        {/* Transport Controls */}
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                        {/* Transport Controls — offset upper-left */}
+                        <div style={{
+                            display: 'flex', gap: 8, justifyContent: 'flex-start', alignItems: 'center',
+                            marginBottom: 16, paddingLeft: 4
+                        }}>
+                            {/* Skip Back — large triangle */}
                             <button onClick={() => skipTrack(-1)} disabled={tracks.length === 0}
-                                style={{ ...btnStyle(tracks.length > 0), width: 52, height: 52 }}>
-                                <SkipBack size={22} color="#fff" />
+                                style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
+                                }}>
+                                <svg width="80" height="70" viewBox="0 0 80 70">
+                                    <polygon points="75,5 5,35 75,65" fill={RED} />
+                                </svg>
                             </button>
 
+                            {/* Play/Pause — circle with triangle */}
                             <button onClick={togglePlay} disabled={!trackLoaded}
-                                style={{ ...btnStyle(trackLoaded), width: 70, height: 70 }}>
-                                {isPlaying ? <Pause size={32} color="#fff" /> : <Play size={32} color="#fff" />}
+                                style={{
+                                    width: 80, height: 80,
+                                    borderRadius: '50%',
+                                    background: '#fff',
+                                    border: `3px solid ${RED}`,
+                                    cursor: trackLoaded ? 'pointer' : 'default',
+                                    opacity: trackLoaded ? 1 : 0.5,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    padding: 0, flexShrink: 0
+                                }}>
+                                {isPlaying ? (
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill={RED}>
+                                        <rect x="6" y="4" width="4" height="16" />
+                                        <rect x="14" y="4" width="4" height="16" />
+                                    </svg>
+                                ) : (
+                                    <svg width="36" height="36" viewBox="0 0 24 24" fill={RED}>
+                                        <polygon points="6 3 20 12 6 21 6 3" />
+                                    </svg>
+                                )}
                             </button>
 
+                            {/* Skip Forward — large triangle */}
                             <button onClick={() => skipTrack(1)} disabled={tracks.length === 0}
-                                style={{ ...btnStyle(tracks.length > 0), width: 52, height: 52 }}>
-                                <SkipForward size={22} color="#fff" />
-                            </button>
-
-                            <button onClick={resetControls}
-                                style={{ ...btnStyle(), padding: '12px 16px', fontSize: 11 }}>
-                                RESET
+                                style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
+                                }}>
+                                <svg width="80" height="70" viewBox="0 0 80 70">
+                                    <polygon points="5,5 75,35 5,65" fill={RED} />
+                                </svg>
                             </button>
                         </div>
 
-                        {/* Vertical Fader Section */}
+                        {/* Vertical Faders — 4 small left + FUN large right */}
                         <div style={{
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'flex-end',
-                            gap: 12,
-                            marginBottom: 16,
-                            padding: '12px 0'
+                            gap: 16,
+                            marginBottom: 20,
+                            padding: '0 8px'
                         }}>
-                            {/* FUN (Speed/Pitch) — LARGEST */}
+                            {/* Left group: MSTR, Verb, Dirt, LPF */}
+                            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end' }}>
+                                <VerticalSlider
+                                    value={masterVol} min={0} max={100} step={1}
+                                    onChange={(v) => setMasterDirect(v)}
+                                    height={320} label="MSTR"
+                                    disabled={false}
+                                />
+                                <VerticalSlider
+                                    value={reverb} min={0} max={100} step={1}
+                                    onChange={(v) => !gameMode && setReverbDirect(v)}
+                                    height={320} label="Verb"
+                                    disabled={gameMode}
+                                />
+                                <VerticalSlider
+                                    value={distortion} min={0} max={100} step={1}
+                                    onChange={(v) => !gameMode && setDistortionDirect(v)}
+                                    height={320} label="Dirt"
+                                    disabled={gameMode}
+                                />
+                                <VerticalSlider
+                                    value={lpf} min={0} max={100} step={1}
+                                    onChange={(v) => !gameMode && setLpfDirect(v)}
+                                    height={320} label="LPF"
+                                    disabled={gameMode}
+                                />
+                            </div>
+
+                            {/* FUN (Speed/Pitch) — tallest, on the right */}
                             <VerticalSlider
                                 value={speed} min={0.54} max={2.0} step={0.01}
                                 onChange={(v) => !gameMode && setSpeedDirect(v)}
-                                height={280} label="FUN" sublabel="SPEED / PITCH"
-                                display={`${Math.round(speed * 100)}%`}
+                                height={560} label="FUN"
                                 disabled={gameMode}
                             />
-                            {/* DRIVE */}
-                            <VerticalSlider
-                                value={distortion} min={0} max={100} step={1}
-                                onChange={(v) => !gameMode && setDistortionDirect(v)}
-                                height={200} label="DRIVE"
-                                display={`${Math.round(distortion)}%`}
-                                disabled={gameMode}
-                            />
-                            {/* REVERB */}
-                            <VerticalSlider
-                                value={reverb} min={0} max={100} step={1}
-                                onChange={(v) => !gameMode && setReverbDirect(v)}
-                                height={200} label="REVERB"
-                                display={`${Math.round(reverb)}%`}
-                                disabled={gameMode}
-                            />
-                            {/* LPF */}
-                            <VerticalSlider
-                                value={lpf} min={0} max={100} step={1}
-                                onChange={(v) => !gameMode && setLpfDirect(v)}
-                                height={200} label="LPF"
-                                display={lpfDisplay}
-                                disabled={gameMode}
-                            />
-                            {/* MASTER */}
-                            <VerticalSlider
-                                value={masterVol} min={0} max={100} step={1}
-                                onChange={(v) => setMasterDirect(v)}
-                                height={200} label="MASTER"
-                                display={`${masterVol}%`}
-                                disabled={false}
-                            />
+                        </div>
+
+                        {/* Reset button */}
+                        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                            <button onClick={resetControls}
+                                style={{
+                                    background: RED, border: 'none', color: '#fff',
+                                    padding: '10px 28px', fontSize: 14, fontWeight: 700,
+                                    fontFamily: FONT, letterSpacing: 2, cursor: 'pointer',
+                                    animation: 'redPulse 2s ease-in-out infinite'
+                                }}>
+                                RESET
+                            </button>
                         </div>
 
                         {/* Playlist */}
                         {tracks.length > 0 && (
-                            <div style={{ background: 'rgba(0,0,0,0.06)', padding: 12, marginBottom: 12, maxHeight: 200, overflowY: 'auto' }}>
-                                <div style={{ fontSize: 10, color: '#555', letterSpacing: 2, textAlign: 'center', marginBottom: 8 }}>
+                            <div style={{ background: 'rgba(0,0,0,0.06)', padding: 12, marginBottom: 12, maxHeight: 180, overflowY: 'auto' }}>
+                                <div style={{ fontSize: 10, color: '#555', letterSpacing: 2, textAlign: 'center', marginBottom: 6 }}>
                                     PLAYLIST
                                 </div>
                                 {tracks.map((track, index) => (
                                     <div key={index}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 8,
-                                            padding: '6px 8px', marginBottom: 2, cursor: 'pointer',
+                                            padding: '5px 8px', marginBottom: 2, cursor: 'pointer',
                                             background: index === currentTrackIndex ? 'rgba(200,50,50,0.15)' : 'transparent',
                                             border: index === currentTrackIndex ? `1px solid ${RED}` : '1px solid transparent'
                                         }}
@@ -706,66 +670,17 @@
                                         <span style={{
                                             flex: 1, fontSize: 13,
                                             color: index === currentTrackIndex ? RED : '#333',
-                                            fontWeight: index === currentTrackIndex ? 700 : 400,
-                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                                            fontWeight: index === currentTrackIndex ? 700 : 400
                                         }}>
                                             {track.name}
                                         </span>
                                         {index === currentTrackIndex && isPlaying && (
-                                            <span style={{ fontSize: 10, color: RED, letterSpacing: 1 }}>PLAYING</span>
+                                            <span style={{ fontSize: 9, color: RED, letterSpacing: 1 }}>PLAYING</span>
                                         )}
                                     </div>
                                 ))}
                             </div>
                         )}
-
-                        {/* Game Meters */}
-                        <div style={{ background: 'rgba(0,0,0,0.06)', padding: 12, border: gameMode ? `2px solid ${RED}` : '2px solid transparent' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: gameMode ? 12 : 0 }}>
-                                <div style={{ fontSize: 10, fontWeight: 700, color: gameMode ? RED : '#555', letterSpacing: 2 }}>
-                                    GAME METERS {gameMode ? '- ACTIVE' : ''}
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        const next = !gameMode;
-                                        setGameMode(next);
-                                        if (next) { setGameFocus(0); setGameFun(0); }
-                                        else { setGameFocus(null); setGameFun(null); }
-                                    }}
-                                    style={{ ...btnStyle(), padding: '4px 12px', fontSize: 10 }}
-                                >
-                                    {gameMode ? 'ON' : 'OFF'}
-                                </button>
-                            </div>
-
-                            {gameMode && (
-                                <div>
-                                    <div style={{ marginBottom: 10 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 4 }}>
-                                            <span style={{ color: '#555', letterSpacing: 1 }}>FOCUS</span>
-                                            <span style={{ color: RED }}>{gameFocus}%</span>
-                                        </div>
-                                        <div style={{ height: 8, background: '#000', position: 'relative' }}>
-                                            <div style={{ height: '100%', width: `${gameFocus}%`, background: RED }} />
-                                        </div>
-                                    </div>
-                                    <div style={{ marginBottom: 8 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 4 }}>
-                                            <span style={{ color: '#555', letterSpacing: 1 }}>FUN</span>
-                                            <span style={{ color: RED }}>{gameFun}%</span>
-                                        </div>
-                                        <div style={{ height: 8, background: '#000', position: 'relative' }}>
-                                            <div style={{ height: '100%', width: `${gameFun}%`, background: RED }} />
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'center', gap: 10, fontSize: 9, color: '#444', letterSpacing: 1, marginTop: 6 }}>
-                                        <span>SPD {computeFromMeters(gameFocus || 0, gameFun || 0).speed.toFixed(2)}x</span>
-                                        <span>DRV {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).dirt)}%</span>
-                                        <span>REV {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).reverb)}%</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
 
                         {/* Footer */}
                         <div style={{ textAlign: 'center', marginTop: 12, fontSize: 10, color: '#555', letterSpacing: 2 }}>

@@ -2140,14 +2140,20 @@
 
         function handleTouchStart(e) {
             if (!gameStarted) return;
-            e.preventDefault();
+            // Only prevent default for canvas touches (allows buttons/iPod to work)
+            if (e.target === canvas) {
+                e.preventDefault();
+            }
             const touch = e.touches[0];
             handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY });
         }
 
         function handleTouchMove(e) {
             if (!gameStarted) return;
-            e.preventDefault();
+            // Only prevent default when actively dragging
+            if (isDragging || isDraggingMeter || isSpinDragging) {
+                e.preventDefault();
+            }
             if (e.touches.length > 0) {
                 const touch = e.touches[0];
                 handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
@@ -2156,7 +2162,10 @@
 
         function handleTouchEnd(e) {
             if (!gameStarted) return;
-            e.preventDefault();
+            // Only prevent default when finishing a drag
+            if (isDragging || isDraggingMeter || isSpinDragging) {
+                e.preventDefault();
+            }
             handleMouseUp({});
         }
 

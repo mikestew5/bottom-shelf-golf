@@ -2376,13 +2376,13 @@
         // ==================== WIND & CLOUDS ====================
         function initClouds() {
             clouds = [];
-            const count = 5 + Math.floor(Math.random() * 6); // 5-10 clouds
+            const count = 6 + Math.floor(Math.random() * 7); // 6-12 clouds
             for (let i = 0; i < count; i++) {
                 clouds.push({
                     x: Math.random() * CANVAS_WIDTH,
                     y: Math.random() * (CANVAS_HEIGHT * 0.65),
-                    width: 60 + Math.random() * 80,
-                    height: 25 + Math.random() * 30,
+                    width: 90 + Math.random() * 120,
+                    height: 37 + Math.random() * 45,
                     opacity: 0.25 + Math.random() * 0.35,
                     speed: (0.3 + Math.random() * 0.7) * windStrength * windDirection
                 });
@@ -4120,52 +4120,56 @@
             ctx.restore();
         }
 
-        // ==================== SHOT SUMMARY BOX (under predictor, left side) ====================
+        // ==================== SHOT SUMMARY BOX (above predictor, left or right) ====================
         function drawShotSummary() {
             if (replayingOpponentShot) return;
             if (shotSummaryMessages.length === 0 && displayBeers === 0 && displayCigs === 0) return;
 
-            const BOX_X = 8;
+            // Position: left side on holes 1, 4, 18; right side on others
+            const leftSideHoles = [1, 4, 18];
+            const isLeft = currentHole && leftSideHoles.includes(currentHole.id);
+            const BOX_W = PREDICTOR_W;
+            const BOX_H = PREDICTOR_Y - 20; // Fill space above predictor
+            const BOX_X = isLeft ? PREDICTOR_X : (CANVAS_WIDTH - PREDICTOR_X - BOX_W);
             const BOX_Y = 10;
-            const BOX_SIZE = 180;  // Square box
 
             ctx.save();
             // Background
             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.fillRect(BOX_X, BOX_Y, BOX_SIZE, BOX_SIZE);
+            ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(BOX_X, BOX_Y, BOX_SIZE, BOX_SIZE);
+            ctx.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
 
             // Bold black text messages
             ctx.fillStyle = '#000';
-            ctx.font = 'bold 18px sans-serif';
+            ctx.font = 'bold 16px sans-serif';
             ctx.textAlign = 'left';
-            const LINE_H = 26;
+            const LINE_H = 24;
             shotSummaryMessages.forEach((msg, i) => {
-                const y = BOX_Y + 22 + i * LINE_H;
-                if (y < BOX_Y + BOX_SIZE - 10) {
-                    ctx.fillText(msg, BOX_X + 8, y, BOX_SIZE - 16);
+                const y = BOX_Y + 20 + i * LINE_H;
+                if (y < BOX_Y + BOX_H - 10) {
+                    ctx.fillText(msg, BOX_X + 6, y, BOX_W - 12);
                 }
             });
 
             // Beer/cig count text + icons
-            let countY = BOX_Y + 14 + shotSummaryMessages.length * LINE_H;
-            if (displayBeers > 0 && countY + 14 < BOX_Y + BOX_SIZE - 4) {
+            let countY = BOX_Y + 12 + shotSummaryMessages.length * LINE_H;
+            if (displayBeers > 0 && countY + 14 < BOX_Y + BOX_H - 4) {
                 ctx.fillStyle = '#000';
-                ctx.font = 'bold 16px sans-serif';
-                ctx.fillText('Beers: ' + displayBeers, BOX_X + 8, countY + 14);
+                ctx.font = 'bold 14px sans-serif';
+                ctx.fillText('Beers: ' + displayBeers, BOX_X + 6, countY + 14);
                 if (beerImg.complete) {
-                    ctx.drawImage(beerImg, BOX_X + BOX_SIZE - 32, countY, 24, 24);
+                    ctx.drawImage(beerImg, BOX_X + BOX_W - 28, countY, 22, 22);
                 }
-                countY += 26;
+                countY += 24;
             }
-            if (displayCigs > 0 && countY + 14 < BOX_Y + BOX_SIZE - 4) {
+            if (displayCigs > 0 && countY + 14 < BOX_Y + BOX_H - 4) {
                 ctx.fillStyle = '#000';
-                ctx.font = 'bold 16px sans-serif';
-                ctx.fillText('Cigs: ' + displayCigs, BOX_X + 8, countY + 14);
+                ctx.font = 'bold 14px sans-serif';
+                ctx.fillText('Cigs: ' + displayCigs, BOX_X + 6, countY + 14);
                 if (cigImg.complete) {
-                    ctx.drawImage(cigImg, BOX_X + BOX_SIZE - 32, countY, 24, 24);
+                    ctx.drawImage(cigImg, BOX_X + BOX_W - 28, countY, 22, 22);
                 }
             }
 

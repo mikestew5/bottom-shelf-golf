@@ -932,10 +932,10 @@
                     <div id="ipodScreen">
                         <div class="nowPlaying">♫ NOW PLAYING</div>
                         <div class="songTitle" id="songDisplay">Press Play</div>
-                        <div id="ipodModeDisplay" style="font-size:8px; color:#336; margin-top:1px;">🎮 GAME</div>
+                        <div id="ipodModeDisplay" style="font-size:8px; color:#336; margin-top:1px;">🎛️ FREE MIX</div>
                     </div>
-                    <div id="ipodPowerBtn" title="Toggle Game/Free Mix Mode">⏻</div>
-                    <div id="ipodModeLabel">GAME MODE</div>
+                    <div id="ipodPowerBtn" class="off" title="Toggle Game/Free Mix Mode">⏻</div>
+                    <div id="ipodModeLabel">FREE MIX</div>
                     <div id="clickWheel">
                         <div id="centerButton" title="Play/Pause">▶</div>
                         <div class="wheelButton" id="prevBtn" title="Previous">◀</div>
@@ -1170,7 +1170,7 @@
         // DJ Stand bridge
         const djFrame = document.getElementById('djStandFrame');
         let djOverlayOpen = false;
-        let gameMusicMode = true; // true = game controls music, false = free mix
+        let gameMusicMode = false; // true = game controls music, false = free mix (default: free mix ON)
         let currentSongName = 'Press Play';
 
         // Auto-play random song: browsers require a user gesture for audio,
@@ -1179,7 +1179,7 @@
         function tryStartMenuMusic() {
             if (menuMusicStarted) return;
             menuMusicStarted = true;
-            sendToDJ({ type: 'setGameMode', enabled: true, focus: 50, fun: 0 });
+            sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
             sendToDJ({ type: 'playRandom' });
             document.removeEventListener('click', tryStartMenuMusic, true);
             document.removeEventListener('touchstart', tryStartMenuMusic, true);
@@ -3078,11 +3078,11 @@
             gameStarted = false;
             totalStrokes = 0;
             totalPar = 0;
-            sendToDJ({ type: 'setGameMode', enabled: false });
-            gameMusicMode = true;
-            document.getElementById('ipodPowerBtn').classList.remove('off');
-            document.getElementById('ipodModeLabel').textContent = 'GAME MODE';
-            document.getElementById('ipodModeDisplay').innerHTML = '🎮 GAME';
+            sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
+            gameMusicMode = false;
+            document.getElementById('ipodPowerBtn').classList.add('off');
+            document.getElementById('ipodModeLabel').textContent = 'FREE MIX';
+            document.getElementById('ipodModeDisplay').innerHTML = '🎛️ FREE MIX';
 
             // Cleanup multiplayer
             if (isMultiplayer) {

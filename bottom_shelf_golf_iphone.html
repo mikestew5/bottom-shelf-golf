@@ -1001,7 +1001,7 @@
                 <div class="songTitle" id="songDisplay">Press Play</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                <div id="ipodPowerBtn" title="Toggle Game/Free Mix Mode">⏻</div>
+                <div id="ipodPowerBtn" class="off" title="Toggle Game/Free Mix Mode">⏻</div>
             </div>
             <div id="clickWheel">
                 <div id="centerButton" title="Play/Pause">▶</div>
@@ -1224,7 +1224,7 @@
         // DJ Stand bridge
         const djFrame = document.getElementById('djStandFrame');
         let djOverlayOpen = false;
-        let gameMusicMode = true; // true = game controls music, false = free mix
+        let gameMusicMode = false; // true = game controls music, false = free mix (default: free mix ON)
         let currentSongName = 'Press Play';
 
         // Auto-play random song: browsers require a user gesture for audio,
@@ -1233,7 +1233,7 @@
         function tryStartMenuMusic() {
             if (menuMusicStarted) return;
             menuMusicStarted = true;
-            sendToDJ({ type: 'setGameMode', enabled: true, focus: 50, fun: 0 });
+            sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
             sendToDJ({ type: 'playRandom' });
             document.removeEventListener('click', tryStartMenuMusic, true);
             document.removeEventListener('touchstart', tryStartMenuMusic, true);
@@ -3204,9 +3204,9 @@
             gameStarted = false;
             totalStrokes = 0;
             totalPar = 0;
-            sendToDJ({ type: 'setGameMode', enabled: false });
-            gameMusicMode = true;
-            document.getElementById('ipodPowerBtn').classList.remove('off');
+            sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
+            gameMusicMode = false;
+            document.getElementById('ipodPowerBtn').classList.add('off');
 
             // Cleanup multiplayer
             if (isMultiplayer) {

@@ -2142,29 +2142,22 @@
             if (!gameStarted) return;
             e.preventDefault();
             const touch = e.touches[0];
-            const mouseEvent = new MouseEvent('mousedown', {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
+            handleMouseDown({ clientX: touch.clientX, clientY: touch.clientY });
         }
 
         function handleTouchMove(e) {
             if (!gameStarted) return;
             e.preventDefault();
-            const touch = e.touches[0];
-            const mouseEvent = new MouseEvent('mousemove', {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+            }
         }
 
         function handleTouchEnd(e) {
             if (!gameStarted) return;
             e.preventDefault();
-            const mouseEvent = new MouseEvent('mouseup', {});
-            canvas.dispatchEvent(mouseEvent);
+            handleMouseUp({});
         }
 
         // ==================== SHOOTING ====================

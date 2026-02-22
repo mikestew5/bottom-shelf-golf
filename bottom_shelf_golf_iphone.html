@@ -3491,50 +3491,75 @@
             ctx.stroke();
             ctx.restore();
 
-            // Flag pole and waving flag
+            // Flag pole and waving flag — mirrors the wind flag exactly
             const hx = currentHole.holePos.x;
             const hy = currentHole.holePos.y;
             const poleH = 50;
-            const t = Date.now() * 0.003;
 
             ctx.save();
             // Pole
-            ctx.strokeStyle = '#444';
+            ctx.strokeStyle = '#666';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(hx, hy);
             ctx.lineTo(hx, hy - poleH);
             ctx.stroke();
 
-            // Waving flag (triangle with sine wave distortion)
-            ctx.fillStyle = '#cc3333';
+            // Pole ball on top
+            ctx.fillStyle = '#888';
             ctx.beginPath();
-            ctx.moveTo(hx, hy - poleH);
-            const flagW = 22;
-            const flagH = 14;
-            const segments = 8;
-            // Top edge (waves)
-            for (let i = 0; i <= segments; i++) {
-                const frac = i / segments;
-                const fx = hx + frac * flagW;
-                const wave = Math.sin(t + frac * 4) * 2 * frac;
-                ctx.lineTo(fx, hy - poleH + wave);
-            }
-            // Bottom edge (waves back)
-            for (let i = segments; i >= 0; i--) {
-                const frac = i / segments;
-                const fx = hx + frac * flagW;
-                const wave = Math.sin(t + frac * 4 + 0.5) * 2 * frac;
-                ctx.lineTo(fx, hy - poleH + flagH + wave);
-            }
-            ctx.closePath();
+            ctx.arc(hx, hy - poleH, 3, 0, Math.PI * 2);
             ctx.fill();
 
-            // Pole ball on top
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(hx, hy - poleH, 2.5, 0, Math.PI * 2);
-            ctx.fill();
+            if (windStrength === 0) {
+                // Limp flag hanging down (same as wind flag)
+                ctx.fillStyle = 'rgba(220, 60, 60, 0.8)';
+                ctx.beginPath();
+                ctx.moveTo(hx, hy - poleH + 2);
+                ctx.lineTo(hx + 3, hy - poleH + 22);
+                ctx.lineTo(hx - 3, hy - poleH + 22);
+                ctx.lineTo(hx, hy - poleH + 20);
+                ctx.lineTo(hx, hy - poleH + 2);
+                ctx.fill();
+            } else {
+                // Animated waving flag — same math as wind flag
+                const t = Date.now() * 0.004;
+                const dir = windDirection;
+                const flagLen = 18 + windStrength * 12;
+                const segments = 8;
+                const segW = flagLen / segments;
+                const flagH = 14;
+                const waveAmp = 1.5 + windStrength * 2.5;
+                const topY = hy - poleH + 2;
+
+                ctx.fillStyle = 'rgba(220, 60, 60, 0.85)';
+                ctx.beginPath();
+                ctx.moveTo(hx, topY);
+                for (let s = 1; s <= segments; s++) {
+                    const fx = hx + dir * s * segW;
+                    const wave = Math.sin(t * (2 + windStrength * 3) + s * 0.8) * waveAmp;
+                    ctx.lineTo(fx, topY + wave);
+                }
+                for (let s = segments; s >= 0; s--) {
+                    const fx = hx + dir * s * segW;
+                    const wave = Math.sin(t * (2 + windStrength * 3) + s * 0.8 + 1) * waveAmp;
+                    ctx.lineTo(fx, topY + flagH + wave);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // Flag stripe
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let s = 0; s <= segments; s++) {
+                    const fx = hx + dir * s * segW;
+                    const wave = Math.sin(t * (2 + windStrength * 3) + s * 0.8 + 0.5) * waveAmp;
+                    if (s === 0) ctx.moveTo(fx, topY + flagH / 2 + wave);
+                    else ctx.lineTo(fx, topY + flagH / 2 + wave);
+                }
+                ctx.stroke();
+            }
             ctx.restore();
         }
 
@@ -3813,7 +3838,7 @@
 
         // ==================== PREDICTOR PATH (left white space) ====================
         const PREDICTOR_X = 10;
-        const PREDICTOR_Y = 50;
+        const PREDICTOR_Y = 225;  // Bottom at ~785, right above cigs button
         const PREDICTOR_W = 110;
         const PREDICTOR_H = 560;
 
@@ -3990,9 +4015,9 @@
             if (!shotSummaryVisible || replayingOpponentShot) return;
             if (shotSummaryMessages.length === 0 && displayBeers === 0 && displayCigs === 0) return;
 
-            const BOX_X = PREDICTOR_X - 2;
-            const BOX_Y = PREDICTOR_Y + PREDICTOR_H + 8;
-            const BOX_W = (SWAG_X + SWAG_W) - PREDICTOR_X + 8;
+            const BOX_X = 8;
+            const BOX_Y = 10;  // Top left of canvas
+            const BOX_W = 180;
             const LINE_H = 26;
             const beerCigH = (displayBeers > 0 || displayCigs > 0) ? 56 : 0;
             const BOX_H = Math.max(50, shotSummaryMessages.length * LINE_H + beerCigH + 16);
@@ -4040,7 +4065,7 @@
         const STATS_W = 150;
         const STATS_H = 210;
         const STATS_X = CANVAS_WIDTH - 10 - STATS_W;
-        const STATS_Y = PREDICTOR_Y;
+        const STATS_Y = 785 - STATS_H;  // Bottom at 785, same as predictor
 
         // Helper: draw red text with black border
         function drawRedBorderText(text, x, y, fontSize) {

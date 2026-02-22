@@ -1179,7 +1179,7 @@
         function tryStartMenuMusic() {
             if (menuMusicStarted) return;
             menuMusicStarted = true;
-            sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
+            // DJ stand defaults to free mix — just start playing
             sendToDJ({ type: 'playRandom' });
             document.removeEventListener('click', tryStartMenuMusic, true);
             document.removeEventListener('touchstart', tryStartMenuMusic, true);

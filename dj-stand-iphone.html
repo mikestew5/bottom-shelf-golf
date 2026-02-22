@@ -105,6 +105,7 @@
             // Audio state
             const [isPlaying, setIsPlaying] = useState(false);
             const [speed, setSpeed] = useState(1.0);
+            const [fun, setFun] = useState(50); // 0-100 abstract FUN scale, 50 = normal speed
             const [distortion, setDistortion] = useState(0);
             const [reverb, setReverb] = useState(0);
             const [lpf, setLpf] = useState(100);
@@ -181,6 +182,11 @@
 
             // LPF slider (0-100) to frequency (200-20000 Hz) logarithmic mapping
             const lpfToFreq = (val) => 200 * Math.pow(100, val / 100);
+
+            // FUN slider (0-100) to speed (0.5-2.0x) exponential mapping
+            // 0=0.5x, 50=1.0x, 100=2.0x (200% max variaspeed)
+            const funToSpeed = (f) => 0.5 * Math.pow(4, f / 100);
+            const speedToFun = (s) => Math.max(0, Math.min(100, Math.log(Math.max(0.5, s) / 0.5) / Math.log(4) * 100));
 
             const getCurrentPosition = () => {
                 if (!isPlayingRef.current || !audioContextRef.current) return playbackOffsetRef.current;
@@ -392,6 +398,11 @@
                 if (gainNodeRef.current) gainNodeRef.current.gain.value = val / 100;
             };
 
+            const setFunDirect = (val) => {
+                setFun(val);
+                setSpeedDirect(funToSpeed(val));
+            };
+
             const drawWaveform = () => {
                 if (!analyserRef.current || !canvasRef.current) return;
                 const canvas = canvasRef.current;
@@ -435,7 +446,7 @@
             };
 
             const resetControls = () => {
-                setSpeedDirect(1.0);
+                setFunDirect(50);
                 setDistortionDirect(0);
                 setReverbDirect(0);
                 setLpfDirect(100);
@@ -481,6 +492,8 @@
                         } else {
                             setGameFocus(null);
                             setGameFun(null);
+                            // Sync fun slider to current speed when exiting game mode
+                            setFun(Math.round(speedToFun(speedRef.current)));
                             // Preserve speed, LPF, and master when switching to free mix
                             if (data.resetDefaults) {
                                 setDistortionDirect(0);
@@ -507,23 +520,16 @@
                 return `${mins}:${secs.toString().padStart(2, '0')}`;
             };
 
-            // Dynamic slider heights based on viewport
-            const sliderContainerRef = useRef(null);
-            const [sliderH, setSliderH] = useState(300);
-
+            // Slider heights from viewport — fixed header takes ~145px
+            const [vh, setVh] = useState(window.innerHeight || 700);
             useEffect(() => {
-                const measure = () => {
-                    if (sliderContainerRef.current) {
-                        const h = sliderContainerRef.current.clientHeight;
-                        if (h > 50) setSliderH(h);
-                    }
-                };
-                measure();
-                window.addEventListener('resize', measure);
-                return () => window.removeEventListener('resize', measure);
+                const onResize = () => setVh(window.innerHeight || 700);
+                window.addEventListener('resize', onResize);
+                return () => window.removeEventListener('resize', onResize);
             }, []);
 
-            const funH = Math.max(200, sliderH - 8);
+            const FIXED_HEADER = 145; // title + waveform + now playing + padding + footer (transport in fader area)
+            const funH = Math.max(200, Math.round(vh - FIXED_HEADER));
             const smallH = Math.max(120, Math.round(funH * 0.55));
 
             const [showPlaylist, setShowPlaylist] = useState(false);
@@ -566,143 +572,219 @@
                         ) : '\u00A0'}
                     </div>
 
-                    {/* Transport Controls */}
-                    <div style={{
-                        display: 'flex', gap: 6, justifyContent: 'flex-start', alignItems: 'center',
-                        marginBottom: 8, paddingLeft: 4, flexShrink: 0
-                    }}>
-                        <button onClick={() => skipTrack(-1)} disabled={tracks.length === 0}
-                            style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
-                            }}>
-                            <svg width="60" height="50" viewBox="0 0 80 70">
-                                <polygon points="75,5 5,35 75,65" fill={RED} />
-                            </svg>
-                        </button>
-
-                        <button onClick={togglePlay} disabled={!trackLoaded}
-                            style={{
-                                width: 60, height: 60,
-                                borderRadius: '50%',
-                                background: '#fff',
-                                border: `3px solid ${RED}`,
-                                cursor: trackLoaded ? 'pointer' : 'default',
-                                opacity: trackLoaded ? 1 : 0.5,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                padding: 0, flexShrink: 0
-                            }}>
-                            {isPlaying ? (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill={RED}>
-                                    <rect x="6" y="4" width="4" height="16" />
-                                    <rect x="14" y="4" width="4" height="16" />
-                                </svg>
-                            ) : (
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill={RED}>
-                                    <polygon points="6 3 20 12 6 21 6 3" />
-                                </svg>
-                            )}
-                        </button>
-
-                        <button onClick={() => skipTrack(1)} disabled={tracks.length === 0}
-                            style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
-                            }}>
-                            <svg width="60" height="50" viewBox="0 0 80 70">
-                                <polygon points="5,5 75,35 5,65" fill={RED} />
-                            </svg>
-                        </button>
-
-                        {/* Playlist toggle */}
-                        <button onClick={() => setShowPlaylist(!showPlaylist)}
-                            style={{
-                                marginLeft: 'auto', background: 'none', border: `1px solid ${RED}`,
-                                color: RED, padding: '4px 10px', fontSize: 9, fontWeight: 700,
-                                fontFamily: FONT, letterSpacing: 1, cursor: 'pointer'
-                            }}>
-                            {showPlaylist ? 'FADERS' : 'TRACKS'}
-                        </button>
-
-                        {/* Reset */}
-                        <button onClick={resetControls}
-                            style={{
-                                background: RED, border: 'none', color: '#fff',
-                                padding: '4px 10px', fontSize: 9, fontWeight: 700,
-                                fontFamily: FONT, letterSpacing: 1, cursor: 'pointer',
-                                animation: 'redPulse 2s ease-in-out infinite'
-                            }}>
-                            RESET
-                        </button>
-                    </div>
-
                     {/* Slider / Playlist area — fills remaining space */}
-                    <div ref={sliderContainerRef} style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                    <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
                         {showPlaylist ? (
-                            /* Playlist view */
-                            <div style={{ overflowY: 'auto', height: '100%', padding: '4px 0' }}>
-                                {tracks.map((track, index) => (
-                                    <div key={index}
+                            /* Playlist view with compact transport */
+                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                {/* Compact transport row */}
+                                <div style={{
+                                    display: 'flex', gap: 6, justifyContent: 'flex-start', alignItems: 'center',
+                                    padding: '4px 4px 8px', flexShrink: 0
+                                }}>
+                                    <button onClick={() => skipTrack(-1)} disabled={tracks.length === 0}
                                         style={{
-                                            display: 'flex', alignItems: 'center', gap: 8,
-                                            padding: '8px 10px', marginBottom: 2, cursor: 'pointer',
-                                            background: index === currentTrackIndex ? 'rgba(200,50,50,0.15)' : 'transparent',
-                                            border: index === currentTrackIndex ? `1px solid ${RED}` : '1px solid transparent'
-                                        }}
-                                        onClick={() => loadTrackByIndex(index)}
-                                    >
-                                        <span style={{
-                                            flex: 1, fontSize: 14,
-                                            color: index === currentTrackIndex ? RED : '#333',
-                                            fontWeight: index === currentTrackIndex ? 700 : 400
+                                            background: 'none', border: 'none', cursor: 'pointer',
+                                            opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
                                         }}>
-                                            {track.name}
-                                        </span>
-                                        {index === currentTrackIndex && isPlaying && (
-                                            <span style={{ fontSize: 9, color: RED, letterSpacing: 1 }}>PLAYING</span>
+                                        <svg width="40" height="34" viewBox="0 0 80 70">
+                                            <polygon points="75,5 5,35 75,65" fill={RED} />
+                                        </svg>
+                                    </button>
+                                    <button onClick={togglePlay} disabled={!trackLoaded}
+                                        style={{
+                                            width: 44, height: 44, borderRadius: '50%',
+                                            background: '#fff', border: `3px solid ${RED}`,
+                                            cursor: trackLoaded ? 'pointer' : 'default',
+                                            opacity: trackLoaded ? 1 : 0.5,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            padding: 0, flexShrink: 0
+                                        }}>
+                                        {isPlaying ? (
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill={RED}>
+                                                <rect x="6" y="4" width="4" height="16" />
+                                                <rect x="14" y="4" width="4" height="16" />
+                                            </svg>
+                                        ) : (
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill={RED}>
+                                                <polygon points="6 3 20 12 6 21 6 3" />
+                                            </svg>
                                         )}
-                                    </div>
-                                ))}
+                                    </button>
+                                    <button onClick={() => skipTrack(1)} disabled={tracks.length === 0}
+                                        style={{
+                                            background: 'none', border: 'none', cursor: 'pointer',
+                                            opacity: tracks.length > 0 ? 1 : 0.4, padding: 0
+                                        }}>
+                                        <svg width="40" height="34" viewBox="0 0 80 70">
+                                            <polygon points="5,5 75,35 5,65" fill={RED} />
+                                        </svg>
+                                    </button>
+                                    <button onClick={() => setShowPlaylist(false)}
+                                        style={{
+                                            marginLeft: 'auto', background: 'none', border: `1px solid ${RED}`,
+                                            color: RED, padding: '4px 10px', fontSize: 9, fontWeight: 700,
+                                            fontFamily: FONT, letterSpacing: 1, cursor: 'pointer'
+                                        }}>
+                                        FADERS
+                                    </button>
+                                    <button onClick={resetControls}
+                                        style={{
+                                            background: RED, border: 'none', color: '#fff',
+                                            padding: '4px 10px', fontSize: 9, fontWeight: 700,
+                                            fontFamily: FONT, letterSpacing: 1, cursor: 'pointer',
+                                            animation: 'redPulse 2s ease-in-out infinite'
+                                        }}>
+                                        RESET
+                                    </button>
+                                </div>
+                                {/* Track list */}
+                                <div style={{ overflowY: 'auto', flex: 1, padding: '4px 0' }}>
+                                    {tracks.map((track, index) => (
+                                        <div key={index}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: 8,
+                                                padding: '8px 10px', marginBottom: 2, cursor: 'pointer',
+                                                background: index === currentTrackIndex ? 'rgba(200,50,50,0.15)' : 'transparent',
+                                                border: index === currentTrackIndex ? `1px solid ${RED}` : '1px solid transparent'
+                                            }}
+                                            onClick={() => loadTrackByIndex(index)}
+                                        >
+                                            <span style={{
+                                                flex: 1, fontSize: 14,
+                                                color: index === currentTrackIndex ? RED : '#333',
+                                                fontWeight: index === currentTrackIndex ? 700 : 400
+                                            }}>
+                                                {track.name}
+                                            </span>
+                                            {index === currentTrackIndex && isPlaying && (
+                                                <span style={{ fontSize: 9, color: RED, letterSpacing: 1 }}>PLAYING</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
-                            /* Fader view */
+                            /* Fader view — transport grid above sliders, FUN full height */
                             <div style={{
                                 display: 'flex',
-                                justifyContent: 'center',
                                 alignItems: 'flex-end',
                                 gap: 10,
-                                height: '100%',
+                                position: 'absolute',
+                                bottom: 0, left: 0, right: 0,
+                                height: funH,
                                 padding: '0 4px'
                             }}>
-                                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
-                                    <VerticalSlider
-                                        value={masterVol} min={0} max={100} step={1}
-                                        onChange={(v) => setMasterDirect(v)}
-                                        height={smallH} label="MSTR"
-                                        disabled={false}
-                                    />
-                                    <VerticalSlider
-                                        value={reverb} min={0} max={100} step={1}
-                                        onChange={(v) => !gameMode && setReverbDirect(v)}
-                                        height={smallH} label="Verb"
-                                        disabled={gameMode}
-                                    />
-                                    <VerticalSlider
-                                        value={distortion} min={0} max={100} step={1}
-                                        onChange={(v) => !gameMode && setDistortionDirect(v)}
-                                        height={smallH} label="Dirt"
-                                        disabled={gameMode}
-                                    />
-                                    <VerticalSlider
-                                        value={lpf} min={0} max={100} step={1}
-                                        onChange={(v) => !gameMode && setLpfDirect(v)}
-                                        height={smallH} label="LPF"
-                                        disabled={gameMode}
-                                    />
+                                {/* Left column: transport buttons + short sliders */}
+                                <div style={{
+                                    display: 'flex', flexDirection: 'column',
+                                    gap: 6, height: '100%'
+                                }}>
+                                    {/* Transport button grid */}
+                                    <div style={{
+                                        flex: 1, minHeight: 0,
+                                        display: 'grid',
+                                        gridTemplateColumns: '1fr 1fr',
+                                        gridTemplateRows: '1fr 1fr 1fr',
+                                        gap: 4
+                                    }}>
+                                        <button onClick={() => skipTrack(-1)} disabled={tracks.length === 0}
+                                            style={{
+                                                background: '#fff', border: `2px solid ${RED}`,
+                                                cursor: 'pointer', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                opacity: tracks.length > 0 ? 1 : 0.4
+                                            }}>
+                                            <svg width="36" height="30" viewBox="0 0 80 70">
+                                                <polygon points="75,5 5,35 75,65" fill={RED} />
+                                            </svg>
+                                        </button>
+                                        <button onClick={() => skipTrack(1)} disabled={tracks.length === 0}
+                                            style={{
+                                                background: '#fff', border: `2px solid ${RED}`,
+                                                cursor: 'pointer', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                opacity: tracks.length > 0 ? 1 : 0.4
+                                            }}>
+                                            <svg width="36" height="30" viewBox="0 0 80 70">
+                                                <polygon points="5,5 75,35 5,65" fill={RED} />
+                                            </svg>
+                                        </button>
+                                        <button onClick={togglePlay} disabled={!trackLoaded}
+                                            style={{
+                                                gridColumn: 'span 2',
+                                                background: RED, border: `2px solid ${RED}`,
+                                                cursor: trackLoaded ? 'pointer' : 'default',
+                                                opacity: trackLoaded ? 1 : 0.5,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                animation: 'redPulse 2s ease-in-out infinite'
+                                            }}>
+                                            {isPlaying ? (
+                                                <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff">
+                                                    <rect x="6" y="4" width="4" height="16" />
+                                                    <rect x="14" y="4" width="4" height="16" />
+                                                </svg>
+                                            ) : (
+                                                <svg width="40" height="40" viewBox="0 0 24 24" fill="#fff">
+                                                    <polygon points="6 3 20 12 6 21 6 3" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                        <button onClick={() => setShowPlaylist(true)}
+                                            style={{
+                                                background: '#fff', border: `2px solid ${RED}`,
+                                                cursor: 'pointer', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                fontFamily: FONT, fontWeight: 700,
+                                                fontSize: 13, color: RED, letterSpacing: 1
+                                            }}>
+                                            TRACKS
+                                        </button>
+                                        <button onClick={resetControls}
+                                            style={{
+                                                background: RED, border: `2px solid ${RED}`,
+                                                cursor: 'pointer', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                fontFamily: FONT, fontWeight: 700,
+                                                fontSize: 13, color: '#fff', letterSpacing: 1,
+                                                animation: 'redPulse 2s ease-in-out infinite'
+                                            }}>
+                                            RESET
+                                        </button>
+                                    </div>
+                                    {/* Short sliders — LPF, Verb, Dirt, MSTR */}
+                                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>
+                                        <VerticalSlider
+                                            value={lpf} min={0} max={100} step={1}
+                                            onChange={(v) => !gameMode && setLpfDirect(v)}
+                                            height={smallH} label="LPF"
+                                            disabled={gameMode}
+                                        />
+                                        <VerticalSlider
+                                            value={reverb} min={0} max={100} step={1}
+                                            onChange={(v) => !gameMode && setReverbDirect(v)}
+                                            height={smallH} label="Verb"
+                                            disabled={gameMode}
+                                        />
+                                        <VerticalSlider
+                                            value={distortion} min={0} max={100} step={1}
+                                            onChange={(v) => !gameMode && setDistortionDirect(v)}
+                                            height={smallH} label="Dirt"
+                                            disabled={gameMode}
+                                        />
+                                        <VerticalSlider
+                                            value={masterVol} min={0} max={100} step={1}
+                                            onChange={(v) => setMasterDirect(v)}
+                                            height={smallH} label="MSTR"
+                                            disabled={false}
+                                        />
+                                    </div>
                                 </div>
+                                {/* FUN slider — full height */}
                                 <VerticalSlider
-                                    value={speed} min={0.54} max={2.0} step={0.01}
-                                    onChange={(v) => !gameMode && setSpeedDirect(v)}
+                                    value={gameMode ? Math.round(speedToFun(speed)) : fun}
+                                    min={0} max={100} step={1}
+                                    onChange={(v) => !gameMode && setFunDirect(v)}
                                     height={funH} label="FUN"
                                     disabled={gameMode}
                                 />

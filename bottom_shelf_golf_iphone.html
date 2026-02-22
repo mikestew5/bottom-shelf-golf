@@ -369,14 +369,6 @@
             box-shadow: none;
         }
 
-        #ipodModeLabel {
-            text-align: center;
-            font-size: 8px;
-            color: #666;
-            font-family: 'Cormorant Garamond', serif;
-            letter-spacing: 0.3px;
-            font-weight: 700;
-        }
 
         /* ==================== GOLF COURSE ==================== */
         .course-container {
@@ -840,6 +832,20 @@
                 text-transform: uppercase;
                 letter-spacing: 1px;
             ">Reset</button>
+            <button id="leaveGameBtn" style="
+                display: none;
+                padding: 3px 8px;
+                background: rgba(255, 50, 50, 0.8);
+                color: #fff;
+                border: 1px solid #FFD700;
+                border-radius: 4px;
+                font-family: 'Playfair Display', serif;
+                font-style: italic;
+                font-size: 9px;
+                cursor: pointer;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            ">Leave</button>
         </div>
 
         <!-- Wind bar: coins (left) | wind flag (center) | wind buttons (right, practice only) -->
@@ -850,20 +856,21 @@
         ">
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <!-- BS Coins (left) -->
-                <div id="coinBalanceRow" style="display:none; align-items: center; gap: 3px; min-width: 60px;">
-                    <canvas id="coinIcon" width="14" height="14" style="width:14px;height:14px;"></canvas>
-                    <span style="font-family:'Cormorant Garamond',serif; font-size:11px; color:#888; font-weight:600;">COINS</span>
-                    <span style="font-family:'Cormorant Garamond',serif; font-size:11px; color:#FFD700; font-weight:900;" id="coinBalanceValue">0</span>
+                <div id="coinBalanceRow" style="display:none; align-items: center; gap: 4px; flex: 1;">
+                    <canvas id="coinIcon" width="18" height="18" style="width:18px;height:18px;"></canvas>
+                    <span style="font-family:'Playfair Display',serif; font-style:italic; font-size:16px; color:#FFD700; font-weight:900;" id="coinBalanceValue">0</span>
                 </div>
-                <div id="coinSpacer" style="min-width:60px;"></div>
+                <div id="coinSpacer" style="flex:1;"></div>
 
                 <!-- Wind flag + label (center) -->
-                <div style="display: flex; align-items: center; gap: 4px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
                     <canvas id="windFlagCanvas" width="50" height="35" style="width:50px;height:35px;"></canvas>
                     <div id="windLabel" style="
-                        font-family: 'Cormorant Garamond', serif;
-                        font-size: 11px;
-                        color: #ccc;
+                        font-family: 'Playfair Display', serif;
+                        font-style: italic;
+                        font-size: 16px;
+                        font-weight: 900;
+                        color: #fff;
                     ">0 mph</div>
                 </div>
 
@@ -965,9 +972,9 @@
             <div class="overlay-btn" id="wingBtn">
                 <div class="overlay-btn-icon"><img src="marlboro.png" style="width:50px;height:50px;object-fit:contain;"></div>
             </div>
-            <div class="overlay-btn" id="clubBtn">
+            <div class="overlay-btn" id="clubBtn" style="background:#c8a200; border-color:#9a7d00;">
                 <div class="overlay-btn-icon" style="font-size:36px;">🏌️</div>
-                <div class="overlay-btn-label">DRIVER</div>
+                <div class="overlay-btn-label" style="color:#000;">DRIVER</div>
             </div>
             <div class="overlay-btn" id="beerBtn">
                 <div class="overlay-btn-icon"><img src="budweiser.png" style="width:50px;height:50px;object-fit:contain;"></div>
@@ -979,11 +986,9 @@
             <div id="ipodScreen">
                 <div class="nowPlaying">♫ NOW PLAYING</div>
                 <div class="songTitle" id="songDisplay">Press Play</div>
-                <div id="ipodModeDisplay" style="font-size:7px; color:#336; margin-top:1px;">🎮 GAME</div>
             </div>
             <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
                 <div id="ipodPowerBtn" title="Toggle Game/Free Mix Mode">⏻</div>
-                <div id="ipodModeLabel">GAME MODE</div>
             </div>
             <div id="clickWheel">
                 <div id="centerButton" title="Play/Pause">▶</div>
@@ -1108,7 +1113,7 @@
         // Realistic stat constants
         const CLUB_AIR_TIME = { driver: 6.0, iron: 4.5, putter: 0 };
         const MPH_PER_PX_FRAME = 30.22;  // 170 mph / 5.625 px/frame (full power driver)
-        const PAR4_HOLE_FT = 1300;         // Average par 4 distance + 100 ft
+        const PAR4_HOLE_FT = 650;          // Tuned tee-to-hole distance for realistic shot stats
 
         // Beer/cig images for summary box
         const beerImg = new Image(); beerImg.src = 'budweiser.png';
@@ -1851,8 +1856,9 @@
                 // Reset game state
                 resetGame();
 
-                // Show reset button only in practice mode
+                // Show reset button in practice, leave button in solo challenge
                 document.getElementById('resetHoleBtn').style.display = gameMode === 'practice' ? 'block' : 'none';
+                document.getElementById('leaveGameBtn').style.display = (gameMode === 'play' && !isMultiplayer) ? 'block' : 'none';
 
                 // Hide start screen, show game
                 document.getElementById('startScreen').classList.add('hidden');
@@ -1938,12 +1944,13 @@
             displayBeers = 0;
             displayCigs = 0;
             shotStatsVisible = false;
+            flagFrozen = false;
             holeSummaryMessages = [];
             holeBeersTotal = 0;
             holeCigsTotal = 0;
 
-            // Wind system (practice + multiplayer)
-            if (gameMode === 'practice') {
+            // Wind system (practice + solo challenge + multiplayer)
+            if (gameMode === 'practice' || (gameMode === 'play' && !isMultiplayer)) {
                 windDirection = Math.random() < 0.5 ? -1 : 1;
                 windStrength = Math.random();
                 initClouds();
@@ -2019,6 +2026,13 @@
             // Reset hole button
             onTap(document.getElementById('resetHoleBtn'), resetHole);
 
+            // Leave game button (solo challenge)
+            onTap(document.getElementById('leaveGameBtn'), () => {
+                if (confirm('Leave this round? Your progress will be lost.')) {
+                    returnToMenu();
+                }
+            });
+
             // Wind control buttons (practice mode)
             document.querySelectorAll('.wind-btn').forEach(btn => {
                 onTap(btn, () => setWind(parseFloat(btn.dataset.wind)));
@@ -2038,8 +2052,6 @@
             onTap(document.getElementById('ipodPowerBtn'), () => {
                 gameMusicMode = !gameMusicMode;
                 document.getElementById('ipodPowerBtn').classList.toggle('off', !gameMusicMode);
-                document.getElementById('ipodModeLabel').textContent = gameMusicMode ? 'GAME MODE' : 'FREE MIX';
-                document.getElementById('ipodModeDisplay').innerHTML = gameMusicMode ? '🎮 GAME' : '🎛️ FREE MIX';
                 if (gameMusicMode) {
                     // Just enable game mode — don't send meters (preserves current speed/song)
                     sendToDJ({ type: 'setGameMode', enabled: true });
@@ -2105,6 +2117,12 @@
             if (sx >= PREDICTOR_X && sx <= SWAG_X + SWAG_W && sy >= PREDICTOR_Y && sy <= PREDICTOR_Y + PREDICTOR_H) {
                 isDraggingMeter = true;
                 meterPower = Math.max(0, Math.min(1, 1 - (sy - FUN_Y) / FUN_H));
+                return;
+            }
+
+            // Tap on shot stats box to hide it
+            if (shotStatsVisible && sx >= STATS_X && sx <= STATS_X + STATS_SIZE && sy >= STATS_Y && sy <= STATS_Y + STATS_SIZE) {
+                shotStatsVisible = false;
                 return;
             }
 
@@ -2313,6 +2331,11 @@
             shotBeersUsed = 0;
             shotCigsUsed = 0;
             shotStatsVisible = true;
+            // Freeze flag preview if this was a tee shot
+            if (isTeeShotActive) {
+                frozenFlagTime = Date.now() * 0.004;
+                flagFrozen = true;
+            }
             const initialSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
             frozenStatSpeed = initialSpeed * MPH_PER_PX_FRAME;
             frozenStatAirTime = CLUB_AIR_TIME[selectedClub] * Math.sqrt(meterPower);
@@ -2405,7 +2428,7 @@
         function updateWindIndicator() {
             const el = document.getElementById('windControls');
             if (!el) return;
-            const hasWind = gameMode === 'practice' || isMultiplayer;
+            const hasWind = gameMode === 'practice' || gameMode === 'play' || isMultiplayer;
             const hasCoins = !!playerName;
             if (!hasWind && !hasCoins) {
                 el.style.display = 'none';
@@ -2570,7 +2593,7 @@
             ball.x += ball.vx;
             ball.y += ball.vy;
 
-            // Wind effect (practice + multiplayer, non-putter, ball in air)
+            // Wind effect (non-putter, ball in air)
             // Half strength while ascending (<30%) and descending (>60%), full strength 30-60%
             if (windStrength > 0 && selectedClub !== 'putter' && shotExpectedDistance > 0 && !replayingOpponentShot) {
                 const progress = Math.min(shotCumulativeDistance / shotExpectedDistance, 1);
@@ -3079,9 +3102,6 @@
                 coinsDiv.style.display = 'none';
             }
 
-            // Update music speed only after hole completion
-            updateMusicSpeed();
-
             if (strokes === 1) {
                 title.textContent = '🎉 HOLE IN ONE! 🎉';
             } else if (diff <= -2) {
@@ -3171,8 +3191,6 @@
             sendToDJ({ type: 'setGameMode', enabled: false });
             gameMusicMode = true;
             document.getElementById('ipodPowerBtn').classList.remove('off');
-            document.getElementById('ipodModeLabel').textContent = 'GAME MODE';
-            document.getElementById('ipodModeDisplay').innerHTML = '🎮 GAME';
 
             // Cleanup multiplayer
             if (isMultiplayer) {
@@ -3391,6 +3409,19 @@
         }
 
         function drawBall() {
+            // Pulsating yellow glow around ball (always visible, helps locate ball)
+            if (!replayingOpponentShot) {
+                const glowPulse = 0.4 + 0.6 * Math.sin(Date.now() * 0.004);
+                ctx.save();
+                ctx.shadowColor = `rgba(255, 215, 0, ${0.3 + glowPulse * 0.4})`;
+                ctx.shadowBlur = 8 + glowPulse * 6;
+                ctx.fillStyle = 'rgba(255, 215, 0, 0)';
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.displayRadius + 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
             // Pulsating red border for tee shot (not during opponent replay)
             if (isTeeShotActive && !ballMoving && !replayingOpponentShot) {
                 const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.006);
@@ -4157,7 +4188,103 @@
             ctx.fillText(text, x, y);
         }
 
+        // Frozen flag state for after shot is taken
+        let frozenFlagTime = 0;
+        let flagFrozen = false;
+
+        function drawFlagPreview() {
+            // Show during tee shot setup OR frozen after shot until ball stops
+            if (replayingOpponentShot) return;
+            if (!isTeeShotActive && !flagFrozen) return;
+            if (shotStatsVisible && !isTeeShotActive && !flagFrozen) return;
+
+            ctx.save();
+            // Background (same as predictor path)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(STATS_X, STATS_Y, STATS_SIZE, STATS_SIZE);
+
+            // Draw larger flag centered in the box
+            const cx = STATS_X + STATS_SIZE / 2;
+            const cy = STATS_Y + STATS_SIZE - 20;
+            const poleH = 120;
+
+            // Pole
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx, cy - poleH);
+            ctx.stroke();
+
+            // Pole ball
+            ctx.fillStyle = '#888';
+            ctx.beginPath();
+            ctx.arc(cx, cy - poleH, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            const t = flagFrozen ? frozenFlagTime : Date.now() * 0.004;
+
+            if (windStrength === 0) {
+                // Limp flag
+                ctx.fillStyle = 'rgba(220, 60, 60, 0.8)';
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - poleH + 4);
+                ctx.lineTo(cx + 6, cy - poleH + 50);
+                ctx.lineTo(cx - 6, cy - poleH + 50);
+                ctx.lineTo(cx, cy - poleH + 46);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                const dir = windDirection;
+                const flagLen = 40 + windStrength * 30;
+                const segments = 10;
+                const segW = flagLen / segments;
+                const flagH = 32;
+                const waveAmp = 3 + windStrength * 5;
+                const topY = cy - poleH + 4;
+
+                ctx.fillStyle = 'rgba(220, 60, 60, 0.85)';
+                ctx.beginPath();
+                ctx.moveTo(cx, topY);
+                for (let s = 1; s <= segments; s++) {
+                    const fx = cx + dir * s * segW;
+                    const wave = Math.sin(t * (2 + windStrength * 3) + s * 0.8) * waveAmp;
+                    ctx.lineTo(fx, topY + wave);
+                }
+                for (let s = segments; s >= 0; s--) {
+                    const fx = cx + dir * s * segW;
+                    const wave = Math.sin(t * (2 + windStrength * 3) + s * 0.8 + 1) * waveAmp;
+                    ctx.lineTo(fx, topY + flagH + wave);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // White stripe
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let s = 0; s <= segments; s++) {
+                    const fx = cx + dir * s * segW;
+                    const wave = Math.sin(t * (2 + windStrength * 3) + s * 0.8 + 0.5) * waveAmp;
+                    if (s === 0) ctx.moveTo(fx, topY + flagH / 2 + wave);
+                    else ctx.lineTo(fx, topY + flagH / 2 + wave);
+                }
+                ctx.stroke();
+            }
+
+            // Wind speed text at bottom
+            const mph = Math.round(windStrength * 30);
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(mph + ' mph ' + (windDirection > 0 ? '→' : '←'), cx, cy + 2);
+
+            ctx.restore();
+        }
+
         function drawShotStats() {
+            // Don't show stats while flag preview is active
+            if (isTeeShotActive || flagFrozen) return;
             if (!shotStatsVisible || replayingOpponentShot) return;
 
             ctx.save();
@@ -4168,6 +4295,12 @@
             ctx.strokeStyle = '#cc3333';
             ctx.lineWidth = 3;
             ctx.strokeRect(STATS_X, STATS_Y, STATS_SIZE, STATS_SIZE);
+
+            // Small X close indicator (top-right corner)
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.textAlign = 'right';
+            ctx.fillText('x', STATS_X + STATS_SIZE - 6, STATS_Y + 14);
 
             ctx.textAlign = 'left';
             const x = STATS_X + 10;
@@ -4207,6 +4340,7 @@
         function finalizeShotSummary() {
             const feetPerPx = holeStartDistance > 0 ? PAR4_HOLE_FT / holeStartDistance : 2.4;
             frozenStatDistance = shotCumulativeDistance * feetPerPx;
+            flagFrozen = false; // Show stats now instead of flag
         }
 
         // ==================== MP CHAT BOX (bottom-right of canvas) ====================
@@ -4397,6 +4531,7 @@
             drawFunMeter();
             drawSwagMeter();
             drawShotSummary();
+            drawFlagPreview();
             drawShotStats();
             drawMpChat();
 

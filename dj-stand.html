@@ -152,6 +152,7 @@
             // Audio state
             const [isPlaying, setIsPlaying] = useState(false);
             const [speed, setSpeed] = useState(1.0);
+            const [fun, setFun] = useState(50); // 0-100 abstract FUN scale, 50 = normal speed
             const [distortion, setDistortion] = useState(0);
             const [reverb, setReverb] = useState(0);
             const [lpf, setLpf] = useState(100);
@@ -216,8 +217,9 @@
             };
 
             // Compute all effects from game meters
+            // FUN range: max 200% speed (was 250%), min 10% below old floor (0.54x vs 0.6x)
             const computeFromMeters = (focus, fun) => {
-                const computedSpeed = Math.min(2.5, 0.6 + (focus / 100 * 0.4) + (fun / 100 * 1.5));
+                const computedSpeed = Math.min(2.0, 0.54 + (focus / 100 * 0.36) + (fun / 100 * 1.1));
                 const computedDirt = Math.min(100, (focus / 100 * 25) + Math.min(75, fun / 60 * 75));
                 const computedReverb = Math.min(60, fun / 100 * 60);
                 const lpfFreq = 20000 - (fun / 100 * 15000);
@@ -227,6 +229,11 @@
 
             // LPF slider (0-100) to frequency (200-20000 Hz) logarithmic mapping
             const lpfToFreq = (val) => 200 * Math.pow(100, val / 100);
+
+            // FUN slider (0-100) to speed (0.5-2.0x) exponential mapping
+            // 0=0.5x, 50=1.0x, 100=2.0x (200% max variaspeed)
+            const funToSpeed = (f) => 0.5 * Math.pow(4, f / 100);
+            const speedToFun = (s) => Math.max(0, Math.min(100, Math.log(Math.max(0.5, s) / 0.5) / Math.log(4) * 100));
 
             const getCurrentPosition = () => {
                 if (!isPlayingRef.current || !audioContextRef.current) return playbackOffsetRef.current;
@@ -445,6 +452,11 @@
                 if (gainNodeRef.current) gainNodeRef.current.gain.value = val / 100;
             };
 
+            const setFunDirect = (val) => {
+                setFun(val);
+                setSpeedDirect(funToSpeed(val));
+            };
+
             // Draw waveform
             const drawWaveform = () => {
                 if (!analyserRef.current || !canvasRef.current) return;
@@ -489,7 +501,7 @@
             };
 
             const resetControls = () => {
-                setSpeedDirect(1.0);
+                setFunDirect(50);
                 setDistortionDirect(0);
                 setReverbDirect(0);
                 setLpfDirect(100);
@@ -530,17 +542,18 @@
                     case 'setGameMode':
                         setGameMode(!!data.enabled);
                         if (data.enabled) {
-                            setGameFocus(data.focus ?? 50);
-                            setGameFun(data.fun ?? 0);
+                            // Only update meters if explicitly provided (preserves song on mode toggle)
+                            if (typeof data.focus === 'number') setGameFocus(data.focus);
+                            if (typeof data.fun === 'number') setGameFun(data.fun);
                         } else {
                             setGameFocus(null);
                             setGameFun(null);
+                            // Sync fun slider to current speed when exiting game mode
+                            setFun(Math.round(speedToFun(speedRef.current)));
+                            // Preserve speed, LPF, and master when switching to free mix
                             if (data.resetDefaults) {
-                                // Reset faders to neutral defaults for free mix
-                                setSpeedDirect(1.0);
                                 setDistortionDirect(0);
                                 setReverbDirect(0);
-                                setLpfDirect(100);
                             }
                         }
                         break;
@@ -567,13 +580,14 @@
             const lpfFreqVal = Math.round(lpfToFreq(lpf));
             const lpfDisplay = lpfFreqVal >= 1000 ? `${(lpfFreqVal / 1000).toFixed(1)}k` : `${lpfFreqVal}`;
 
-            // Fader channel definitions
+            // Fader channel definitions (order matches mobile: LPF, DIRT, REVERB, MASTER, FUN)
+            const funDisplay = gameMode ? `${speed.toFixed(2)}x` : `${fun}`;
             const faders = [
-                { label: 'SPEED', value: speed, min: 0.6, max: 2.5, step: 0.01, display: `${speed.toFixed(2)}x`, color: '#3b82f6', onChange: (v) => !gameMode && setSpeedDirect(v) },
-                { label: 'DRIVE', value: distortion, min: 0, max: 100, step: 1, display: `${distortion}%`, color: '#f59e0b', onChange: (v) => !gameMode && setDistortionDirect(v) },
-                { label: 'REVERB', value: reverb, min: 0, max: 100, step: 1, display: `${reverb}%`, color: '#7c3aed', onChange: (v) => !gameMode && setReverbDirect(v) },
                 { label: 'LPF', value: lpf, min: 0, max: 100, step: 1, display: lpfDisplay, color: '#10b981', onChange: (v) => !gameMode && setLpfDirect(v) },
-                { label: 'MASTER', value: masterVol, min: 0, max: 100, step: 1, display: `${masterVol}%`, color: '#ef4444', onChange: (v) => setMasterDirect(v) }
+                { label: 'DIRT', value: distortion, min: 0, max: 100, step: 1, display: `${distortion}%`, color: '#f59e0b', onChange: (v) => !gameMode && setDistortionDirect(v) },
+                { label: 'REVERB', value: reverb, min: 0, max: 100, step: 1, display: `${reverb}%`, color: '#7c3aed', onChange: (v) => !gameMode && setReverbDirect(v) },
+                { label: 'MASTER', value: masterVol, min: 0, max: 100, step: 1, display: `${masterVol}%`, color: '#ef4444', onChange: (v) => setMasterDirect(v) },
+                { label: 'FUN', value: gameMode ? Math.round(speedToFun(speed)) : fun, min: 0, max: 100, step: 1, display: funDisplay, color: '#3b82f6', onChange: (v) => !gameMode && setFunDirect(v) }
             ];
 
             // Reel component
@@ -942,7 +956,7 @@
                                         fontSize: '0.55rem', color: '#666', letterSpacing: '1px', marginTop: '8px'
                                     }}>
                                         <span>SPD {computeFromMeters(gameFocus || 0, gameFun || 0).speed.toFixed(2)}x</span>
-                                        <span>DRV {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).dirt)}%</span>
+                                        <span>DRT {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).dirt)}%</span>
                                         <span>REV {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).reverb)}%</span>
                                         <span>LPF {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).lpf)}%</span>
                                     </div>

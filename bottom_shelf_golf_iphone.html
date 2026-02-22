@@ -3172,7 +3172,7 @@
         function cycleClub() {
             const idx = clubOrder.indexOf(selectedClub);
             selectedClub = clubOrder[(idx + 1) % clubOrder.length];
-            meterPower = selectedClub === 'driver' ? 1.0 : 0.35;
+            meterPower = selectedClub === 'driver' ? 1.0 : selectedClub === 'iron' ? 0.65 : 0.35;
             const btn = document.getElementById('clubBtn');
             btn.querySelector('.overlay-btn-icon').textContent = clubIcons[selectedClub];
             btn.querySelector('.overlay-btn-label').textContent = clubNames[selectedClub];

@@ -283,12 +283,12 @@
             font-family: 'Cormorant Garamond', serif;
             overflow: hidden;
             cursor: pointer;
-            animation: screenPulse 2.5s ease-in-out infinite;
+            animation: screenPulse 1.2s ease-in-out infinite;
         }
 
         @keyframes screenPulse {
-            0%, 100% { box-shadow: 0 0 3px rgba(100,180,255,0.3); }
-            50% { box-shadow: 0 0 10px rgba(100,180,255,0.8), 0 0 16px rgba(100,180,255,0.3); }
+            0%, 100% { box-shadow: 0 0 4px rgba(100,180,255,0.4); transform: scale(1); }
+            50% { box-shadow: 0 0 18px rgba(100,180,255,1), 0 0 35px rgba(100,180,255,0.6), 0 0 50px rgba(100,180,255,0.3); transform: scale(1.03); }
         }
 
         .nowPlaying { font-weight: bold; font-size: 7px; letter-spacing: 0.5px; }
@@ -988,7 +988,7 @@
     <div id="djOverlay">
         <button id="djCloseBtn">&times;</button>
         <div class="dj-frame-wrapper">
-            <iframe id="djStandFrame" src="dj-stand.html" allow="autoplay; fullscreen"></iframe>
+            <iframe id="djStandFrame" src="dj-stand-iphone.html" allow="autoplay; fullscreen"></iframe>
         </div>
     </div>
 

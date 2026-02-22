@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Roughest Demo Tapes 3</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        @keyframes redPulse {
+            0%, 100% { box-shadow: 0 0 4px rgba(200,50,50,0.3); }
+            50% { box-shadow: 0 0 16px rgba(200,50,50,0.8), 0 0 24px rgba(200,50,50,0.3); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        const FONT = "'Playfair Display', serif";
+        const RED = '#cc3333';
+        const BG = '#99ccff';
+
+        // SVG Icons (filled, no stroke for clean look)
+        const Play = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+        );
+        const Pause = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+        );
+        const SkipBack = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
+                <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                <rect x="5" y="5" width="2" height="14"></rect>
+            </svg>
+        );
+        const SkipForward = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none">
+                <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                <rect x="17" y="5" width="2" height="14"></rect>
+            </svg>
+        );
+        const Maximize = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+        );
+        const Minimize = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+                <polyline points="4 14 10 14 10 20"></polyline>
+                <polyline points="20 10 14 10 14 4"></polyline>
+                <line x1="14" y1="10" x2="21" y2="3"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+        );
+
+        // Custom Vertical Slider
+        const VerticalSlider = ({ value, min, max, step, onChange, height, label, sublabel, display, disabled }) => {
+            const trackRef = useRef(null);
+            const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+
+            const getVal = (clientY) => {
+                if (!trackRef.current) return value;
+                const rect = trackRef.current.getBoundingClientRect();
+                const ratio = 1 - Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+                let v = min + ratio * (max - min);
+                v = Math.round(v / step) * step;
+                return Math.max(min, Math.min(max, parseFloat(v.toFixed(6))));
+            };
+
+            const startDrag = (startY) => {
+                if (disabled) return;
+                onChange(getVal(startY));
+                const onMove = (e) => {
+                    e.preventDefault();
+                    const y = e.touches ? e.touches[0].clientY : e.clientY;
+                    onChange(getVal(y));
+                };
+                const onEnd = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onEnd);
+                    document.removeEventListener('touchmove', onMove);
+                    document.removeEventListener('touchend', onEnd);
+                };
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onEnd);
+                document.addEventListener('touchmove', onMove, { passive: false });
+                document.addEventListener('touchend', onEnd);
+            };
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <div style={{ fontSize: 11, color: RED, letterSpacing: 1, fontWeight: 700, fontFamily: FONT, textAlign: 'center' }}>{label}</div>
+                    {sublabel && <div style={{ fontSize: 8, color: '#444', letterSpacing: 1, fontFamily: FONT }}>{sublabel}</div>}
+                    <div style={{ fontSize: 12, color: '#222', fontWeight: 700, fontFamily: FONT, marginBottom: 2 }}>{display}</div>
+                    <div ref={trackRef}
+                        style={{
+                            width: 4, height, background: '#000', position: 'relative',
+                            cursor: disabled ? 'default' : 'pointer',
+                            opacity: disabled ? 0.4 : 1, touchAction: 'none'
+                        }}
+                        onMouseDown={(e) => { e.preventDefault(); startDrag(e.clientY); }}
+                        onTouchStart={(e) => { e.preventDefault(); startDrag(e.touches[0].clientY); }}
+                    >
+                        <div style={{
+                            position: 'absolute',
+                            bottom: `calc(${pct}% - 10px)`,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: 34, height: 18,
+                            background: RED,
+                            animation: disabled ? 'none' : 'redPulse 2s ease-in-out infinite',
+                            cursor: disabled ? 'default' : 'grab'
+                        }} />
+                    </div>
+                </div>
+            );
+        };
+
+        function DJStand() {
+            // Audio state
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [speed, setSpeed] = useState(1.0);
+            const [distortion, setDistortion] = useState(0);
+            const [reverb, setReverb] = useState(0);
+            const [lpf, setLpf] = useState(100);
+            const [masterVol, setMasterVol] = useState(80);
+            const [currentTime, setCurrentTime] = useState(0);
+            const [duration, setDuration] = useState(0);
+            const [tracks] = useState([
+                { name: 'Sure Is Cold', url: 'sureiscoldroughmaster.m4a' },
+                { name: 'Carolina Curveball', url: 'carolinacurveballroughmaster.m4a' },
+                { name: 'Yellow Pine', url: 'yellopineroughmaster.m4a' },
+                { name: 'Time', url: 'timeroughmaster.m4a' },
+                { name: 'Divorced', url: 'divorcedroughymaster.m4a' },
+                { name: 'U Don\'t (Wedding)', url: 'udont_weddingroughmaster.m4a' },
+                { name: 'Memphis', url: 'newmemphismix.m4a' }
+            ]);
+            const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
+            const [trackLoaded, setTrackLoaded] = useState(false);
+            const [loading, setLoading] = useState(false);
+
+            // Audio refs
+            const audioContextRef = useRef(null);
+            const audioBufferRef = useRef(null);
+            const sourceNodeRef = useRef(null);
+            const analyserRef = useRef(null);
+            const distortionNodeRef = useRef(null);
+            const gainNodeRef = useRef(null);
+            const lpfNodeRef = useRef(null);
+            const reverbConvolverRef = useRef(null);
+            const reverbWetGainRef = useRef(null);
+            const reverbDryGainRef = useRef(null);
+            const canvasRef = useRef(null);
+            const animationRef = useRef(null);
+            const initRef = useRef(false);
+            const timeIntervalRef = useRef(null);
+
+            // Playback position tracking
+            const playbackOffsetRef = useRef(0);
+            const contextStartTimeRef = useRef(0);
+            const speedRef = useRef(1.0);
+            const isPlayingRef = useRef(false);
+            const currentTrackIndexRef = useRef(-1);
+
+            // Fullscreen
+            const [isFullscreen, setIsFullscreen] = useState(false);
+
+            // Game meters
+            const [gameFocus, setGameFocus] = useState(null);
+            const [gameFun, setGameFun] = useState(null);
+            const [gameMode, setGameMode] = useState(false);
+
+            // Generate impulse response for convolution reverb
+            const generateImpulseResponse = (ctx, dur = 2, decay = 2) => {
+                const length = ctx.sampleRate * dur;
+                const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+                for (let ch = 0; ch < 2; ch++) {
+                    const data = impulse.getChannelData(ch);
+                    for (let i = 0; i < length; i++) {
+                        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+                    }
+                }
+                return impulse;
+            };
+
+            // Compute all effects from game meters
+            // FUN range: max 200% speed (was 250%), min 10% below old floor (0.54x vs 0.6x)
+            const computeFromMeters = (focus, fun) => {
+                const computedSpeed = Math.min(2.0, 0.54 + (focus / 100 * 0.36) + (fun / 100 * 1.1));
+                const computedDirt = Math.min(100, (focus / 100 * 25) + Math.min(75, fun / 60 * 75));
+                const computedReverb = Math.min(60, fun / 100 * 60);
+                const lpfFreq = 20000 - (fun / 100 * 15000);
+                const computedLpf = Math.max(0, Math.min(100, Math.log(lpfFreq / 200) / Math.log(100) * 100));
+                return { speed: computedSpeed, dirt: computedDirt, reverb: computedReverb, lpf: computedLpf };
+            };
+
+            // LPF slider (0-100) to frequency (200-20000 Hz) logarithmic mapping
+            const lpfToFreq = (val) => 200 * Math.pow(100, val / 100);
+
+            const getCurrentPosition = () => {
+                if (!isPlayingRef.current || !audioContextRef.current) return playbackOffsetRef.current;
+                const elapsed = audioContextRef.current.currentTime - contextStartTimeRef.current;
+                return playbackOffsetRef.current + elapsed * speedRef.current;
+            };
+
+            // Initialize Web Audio API — full chain
+            useEffect(() => {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                audioContextRef.current = ctx;
+
+                analyserRef.current = ctx.createAnalyser();
+                analyserRef.current.fftSize = 2048;
+                distortionNodeRef.current = ctx.createWaveShaper();
+                gainNodeRef.current = ctx.createGain();
+                gainNodeRef.current.gain.value = 0.8;
+
+                lpfNodeRef.current = ctx.createBiquadFilter();
+                lpfNodeRef.current.type = 'lowpass';
+                lpfNodeRef.current.frequency.value = 20000;
+
+                reverbConvolverRef.current = ctx.createConvolver();
+                reverbConvolverRef.current.buffer = generateImpulseResponse(ctx);
+                reverbWetGainRef.current = ctx.createGain();
+                reverbWetGainRef.current.gain.value = 0;
+                reverbDryGainRef.current = ctx.createGain();
+                reverbDryGainRef.current.gain.value = 1;
+
+                // Chain: Source -> LPF -> Distortion -> [Dry + Wet(Convolver)] -> Analyser -> Master Gain -> Out
+                lpfNodeRef.current.connect(distortionNodeRef.current);
+                distortionNodeRef.current.connect(reverbDryGainRef.current);
+                reverbDryGainRef.current.connect(analyserRef.current);
+                distortionNodeRef.current.connect(reverbConvolverRef.current);
+                reverbConvolverRef.current.connect(reverbWetGainRef.current);
+                reverbWetGainRef.current.connect(analyserRef.current);
+                analyserRef.current.connect(gainNodeRef.current);
+                gainNodeRef.current.connect(ctx.destination);
+
+                return () => {
+                    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+                    if (timeIntervalRef.current) clearInterval(timeIntervalRef.current);
+                    ctx.close();
+                };
+            }, []);
+
+            // Auto-load random track and attempt autoplay
+            useEffect(() => {
+                if (!initRef.current && tracks.length > 0) {
+                    initRef.current = true;
+                    const randIdx = Math.floor(Math.random() * tracks.length);
+                    loadTrackByIndex(randIdx, true);
+                }
+            }, []);
+
+            // Time display updater
+            useEffect(() => {
+                if (isPlaying) {
+                    timeIntervalRef.current = setInterval(() => {
+                        setCurrentTime(Math.min(getCurrentPosition(), duration));
+                    }, 80);
+                } else {
+                    if (timeIntervalRef.current) clearInterval(timeIntervalRef.current);
+                }
+                return () => { if (timeIntervalRef.current) clearInterval(timeIntervalRef.current); };
+            }, [isPlaying, duration]);
+
+            // Apply game meters
+            useEffect(() => {
+                if (gameMode && gameFocus !== null && gameFun !== null) {
+                    const { speed, dirt, reverb, lpf } = computeFromMeters(gameFocus, gameFun);
+                    setSpeedDirect(speed);
+                    setDistortionDirect(dirt);
+                    setReverbDirect(reverb);
+                    setLpfDirect(lpf);
+                }
+            }, [gameMode, gameFocus, gameFun]);
+
+            // Start playback from current offset
+            const startPlayback = () => {
+                if (!audioBufferRef.current || !audioContextRef.current) return;
+                if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
+
+                const source = audioContextRef.current.createBufferSource();
+                source.buffer = audioBufferRef.current;
+                source.playbackRate.value = speedRef.current;
+                source.connect(lpfNodeRef.current);
+
+                source.onended = () => {
+                    if (sourceNodeRef.current === source) {
+                        isPlayingRef.current = false;
+                        setIsPlaying(false);
+                        playbackOffsetRef.current = 0;
+                        setCurrentTime(0);
+                        autoAdvance();
+                    }
+                };
+
+                const offset = Math.max(0, Math.min(playbackOffsetRef.current, audioBufferRef.current.duration - 0.01));
+                source.start(0, offset);
+                sourceNodeRef.current = source;
+                contextStartTimeRef.current = audioContextRef.current.currentTime;
+                isPlayingRef.current = true;
+                setIsPlaying(true);
+                drawWaveform();
+            };
+
+            // Stop playback, save position
+            const stopPlayback = () => {
+                if (sourceNodeRef.current) {
+                    const pos = getCurrentPosition();
+                    sourceNodeRef.current.onended = null;
+                    try { sourceNodeRef.current.stop(); } catch (e) {}
+                    sourceNodeRef.current.disconnect();
+                    sourceNodeRef.current = null;
+                    playbackOffsetRef.current = pos;
+                }
+                isPlayingRef.current = false;
+                if (animationRef.current) cancelAnimationFrame(animationRef.current);
+            };
+
+            const autoAdvance = () => {
+                const idx = currentTrackIndexRef.current;
+                if (tracks.length > 1) {
+                    const nextIdx = (idx + 1) % tracks.length;
+                    setTimeout(() => loadTrackByIndex(nextIdx), 100);
+                }
+            };
+
+            // Load track via XHR (works from file:// protocol)
+            const loadTrackByIndex = async (index, autoPlay = true) => {
+                if (index < 0 || index >= tracks.length) return;
+                stopPlayback();
+                setLoading(true);
+                setCurrentTrackIndex(index);
+                currentTrackIndexRef.current = index;
+                setTrackLoaded(false);
+                playbackOffsetRef.current = 0;
+                setCurrentTime(0);
+
+                try {
+                    const arrayBuffer = await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', tracks[index].url, true);
+                        xhr.responseType = 'arraybuffer';
+                        xhr.onload = () => {
+                            if (xhr.status === 200 || xhr.status === 0) resolve(xhr.response);
+                            else reject(new Error(`HTTP ${xhr.status}`));
+                        };
+                        xhr.onerror = () => reject(new Error('Failed to load audio file'));
+                        xhr.send();
+                    });
+
+                    const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+                    audioBufferRef.current = audioBuffer;
+                    setDuration(audioBuffer.duration);
+                    setTrackLoaded(true);
+                    setLoading(false);
+
+                    try { window.parent.postMessage({ type: 'trackChanged', name: tracks[index].name, index }, '*'); } catch(e) {}
+                    if (autoPlay) startPlayback();
+                } catch (err) {
+                    console.error('Failed to load audio:', err);
+                    setLoading(false);
+                }
+            };
+
+            // Warm tube distortion curve
+            const makeDistortionCurve = (amount) => {
+                const samples = 44100;
+                const curve = new Float32Array(samples);
+                for (let i = 0; i < samples; i++) {
+                    const x = (i * 2) / samples - 1;
+                    curve[i] = Math.tanh(x * (1 + amount / 10));
+                }
+                return curve;
+            };
+
+            // --- Control setters (sample-accurate, zero lag) ---
+
+            const setSpeedDirect = (val) => {
+                if (isPlayingRef.current) {
+                    playbackOffsetRef.current = getCurrentPosition();
+                    contextStartTimeRef.current = audioContextRef.current.currentTime;
+                }
+                speedRef.current = val;
+                setSpeed(val);
+                if (sourceNodeRef.current) sourceNodeRef.current.playbackRate.value = val;
+            };
+
+            const setDistortionDirect = (val) => {
+                setDistortion(val);
+                if (distortionNodeRef.current) {
+                    distortionNodeRef.current.curve = makeDistortionCurve(val / 10);
+                    distortionNodeRef.current.oversample = '4x';
+                }
+            };
+
+            const setReverbDirect = (val) => {
+                setReverb(val);
+                if (reverbWetGainRef.current && reverbDryGainRef.current) {
+                    reverbWetGainRef.current.gain.value = val / 100;
+                    reverbDryGainRef.current.gain.value = 1 - (val / 100);
+                }
+            };
+
+            const setLpfDirect = (val) => {
+                setLpf(val);
+                if (lpfNodeRef.current) {
+                    lpfNodeRef.current.frequency.value = lpfToFreq(val);
+                }
+            };
+
+            const setMasterDirect = (val) => {
+                setMasterVol(val);
+                if (gainNodeRef.current) gainNodeRef.current.gain.value = val / 100;
+            };
+
+            // Draw waveform
+            const drawWaveform = () => {
+                if (!analyserRef.current || !canvasRef.current) return;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const bufferLength = analyserRef.current.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                const draw = () => {
+                    animationRef.current = requestAnimationFrame(draw);
+                    analyserRef.current.getByteTimeDomainData(dataArray);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.lineWidth = 2.5;
+                    ctx.strokeStyle = RED;
+                    ctx.beginPath();
+                    const sliceWidth = canvas.width / bufferLength;
+                    let x = 0;
+                    for (let i = 0; i < bufferLength; i++) {
+                        const v = dataArray[i] / 128.0;
+                        const y = (v * canvas.height) / 2;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                        x += sliceWidth;
+                    }
+                    ctx.lineTo(canvas.width, canvas.height / 2);
+                    ctx.stroke();
+                };
+                draw();
+            };
+
+            const togglePlay = async () => {
+                if (!trackLoaded) return;
+                if (isPlayingRef.current) { stopPlayback(); setIsPlaying(false); }
+                else startPlayback();
+            };
+
+            const skipTrack = (direction) => {
+                if (tracks.length === 0) return;
+                const newIndex = (currentTrackIndexRef.current + direction + tracks.length) % tracks.length;
+                loadTrackByIndex(newIndex);
+            };
+
+            const resetControls = () => {
+                setSpeedDirect(1.0);
+                setDistortionDirect(0);
+                setReverbDirect(0);
+                setLpfDirect(100);
+                setMasterDirect(80);
+            };
+
+            // Fullscreen
+            const toggleFullscreen = () => {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                else document.exitFullscreen();
+            };
+
+            useEffect(() => {
+                const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+                document.addEventListener('fullscreenchange', onFsChange);
+                return () => document.removeEventListener('fullscreenchange', onFsChange);
+            }, []);
+
+            // postMessage listener
+            const commandHandlerRef = useRef(null);
+            commandHandlerRef.current = (data) => {
+                if (!data || !data.type) return;
+                switch (data.type) {
+                    case 'togglePlay': togglePlay(); break;
+                    case 'play':
+                        if (!isPlayingRef.current && trackLoaded) startPlayback();
+                        break;
+                    case 'pause':
+                        if (isPlayingRef.current) { stopPlayback(); setIsPlaying(false); }
+                        break;
+                    case 'skipTrack': skipTrack(data.direction || 1); break;
+                    case 'playRandom':
+                        if (tracks.length > 0) {
+                            const randIdx = Math.floor(Math.random() * tracks.length);
+                            loadTrackByIndex(randIdx);
+                        }
+                        break;
+                    case 'setGameMode':
+                        setGameMode(!!data.enabled);
+                        if (data.enabled) {
+                            setGameFocus(data.focus ?? 50);
+                            setGameFun(data.fun ?? 0);
+                        } else {
+                            setGameFocus(null);
+                            setGameFun(null);
+                            if (data.resetDefaults) {
+                                setSpeedDirect(1.0);
+                                setDistortionDirect(0);
+                                setReverbDirect(0);
+                                setLpfDirect(100);
+                            }
+                        }
+                        break;
+                    case 'gameMeters':
+                        if (typeof data.focus === 'number') setGameFocus(data.focus);
+                        if (typeof data.fun === 'number') setGameFun(data.fun);
+                        break;
+                }
+            };
+
+            useEffect(() => {
+                const onMessage = (e) => { if (commandHandlerRef.current) commandHandlerRef.current(e.data); };
+                window.addEventListener('message', onMessage);
+                return () => window.removeEventListener('message', onMessage);
+            }, []);
+
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            // LPF display value
+            const lpfFreqVal = Math.round(lpfToFreq(lpf));
+            const lpfDisplay = lpfFreqVal >= 1000 ? `${(lpfFreqVal / 1000).toFixed(1)}k` : `${lpfFreqVal}`;
+
+            // Button style helper
+            const btnStyle = (enabled = true) => ({
+                background: RED,
+                border: 'none',
+                color: '#fff',
+                cursor: enabled ? 'pointer' : 'default',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: enabled ? 1 : 0.4,
+                animation: enabled ? 'redPulse 2s ease-in-out infinite' : 'none',
+                fontFamily: FONT,
+                fontWeight: 700,
+                letterSpacing: 1
+            });
+
+            return (
+                <div style={{
+                    minHeight: '100vh',
+                    background: BG,
+                    fontFamily: FONT,
+                    padding: '16px 12px',
+                    color: '#222'
+                }}>
+                    <div style={{ maxWidth: 400, margin: '0 auto' }}>
+
+                        {/* Header */}
+                        <div style={{ textAlign: 'center', marginBottom: 12, position: 'relative' }}>
+                            <div style={{ fontSize: 10, letterSpacing: 3, color: '#555', marginBottom: 2 }}>
+                                BOTTOM SHELF
+                            </div>
+                            <h1 style={{ fontSize: 20, fontWeight: 700, color: RED, margin: 0, letterSpacing: 1 }}>
+                                ROUGHEST DEMO TAPES 3
+                            </h1>
+                            <button onClick={toggleFullscreen} style={{
+                                position: 'absolute', top: 0, right: 0,
+                                background: 'none', border: `1px solid ${RED}`,
+                                padding: 6, cursor: 'pointer'
+                            }}>
+                                {isFullscreen ? <Minimize size={14} color={RED} /> : <Maximize size={14} color={RED} />}
+                            </button>
+                        </div>
+
+                        {/* Waveform */}
+                        <div style={{ background: '#000', padding: 6, marginBottom: 10 }}>
+                            <canvas ref={canvasRef} width={836} height={50}
+                                style={{ width: '100%', height: 'auto', display: 'block' }} />
+                        </div>
+
+                        {/* Now Playing */}
+                        {(trackLoaded || loading) && tracks[currentTrackIndex] && (
+                            <div style={{ textAlign: 'center', marginBottom: 10, padding: '6px 10px', background: 'rgba(0,0,0,0.08)' }}>
+                                <div style={{ fontSize: 9, color: '#555', letterSpacing: 2, marginBottom: 2 }}>
+                                    {loading ? 'LOADING...' : 'NOW PLAYING'}
+                                </div>
+                                <div style={{ fontSize: 14, color: RED, fontWeight: 700 }}>
+                                    {tracks[currentTrackIndex].name}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#333', letterSpacing: 1, marginTop: 2 }}>
+                                    {formatTime(currentTime)} / {formatTime(duration)}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Transport Controls */}
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                            <button onClick={() => skipTrack(-1)} disabled={tracks.length === 0}
+                                style={{ ...btnStyle(tracks.length > 0), width: 52, height: 52 }}>
+                                <SkipBack size={22} color="#fff" />
+                            </button>
+
+                            <button onClick={togglePlay} disabled={!trackLoaded}
+                                style={{ ...btnStyle(trackLoaded), width: 70, height: 70 }}>
+                                {isPlaying ? <Pause size={32} color="#fff" /> : <Play size={32} color="#fff" />}
+                            </button>
+
+                            <button onClick={() => skipTrack(1)} disabled={tracks.length === 0}
+                                style={{ ...btnStyle(tracks.length > 0), width: 52, height: 52 }}>
+                                <SkipForward size={22} color="#fff" />
+                            </button>
+
+                            <button onClick={resetControls}
+                                style={{ ...btnStyle(), padding: '12px 16px', fontSize: 11 }}>
+                                RESET
+                            </button>
+                        </div>
+
+                        {/* Vertical Fader Section */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'flex-end',
+                            gap: 12,
+                            marginBottom: 16,
+                            padding: '12px 0'
+                        }}>
+                            {/* FUN (Speed/Pitch) — LARGEST */}
+                            <VerticalSlider
+                                value={speed} min={0.54} max={2.0} step={0.01}
+                                onChange={(v) => !gameMode && setSpeedDirect(v)}
+                                height={280} label="FUN" sublabel="SPEED / PITCH"
+                                display={`${Math.round(speed * 100)}%`}
+                                disabled={gameMode}
+                            />
+                            {/* DRIVE */}
+                            <VerticalSlider
+                                value={distortion} min={0} max={100} step={1}
+                                onChange={(v) => !gameMode && setDistortionDirect(v)}
+                                height={200} label="DRIVE"
+                                display={`${Math.round(distortion)}%`}
+                                disabled={gameMode}
+                            />
+                            {/* REVERB */}
+                            <VerticalSlider
+                                value={reverb} min={0} max={100} step={1}
+                                onChange={(v) => !gameMode && setReverbDirect(v)}
+                                height={200} label="REVERB"
+                                display={`${Math.round(reverb)}%`}
+                                disabled={gameMode}
+                            />
+                            {/* LPF */}
+                            <VerticalSlider
+                                value={lpf} min={0} max={100} step={1}
+                                onChange={(v) => !gameMode && setLpfDirect(v)}
+                                height={200} label="LPF"
+                                display={lpfDisplay}
+                                disabled={gameMode}
+                            />
+                            {/* MASTER */}
+                            <VerticalSlider
+                                value={masterVol} min={0} max={100} step={1}
+                                onChange={(v) => setMasterDirect(v)}
+                                height={200} label="MASTER"
+                                display={`${masterVol}%`}
+                                disabled={false}
+                            />
+                        </div>
+
+                        {/* Playlist */}
+                        {tracks.length > 0 && (
+                            <div style={{ background: 'rgba(0,0,0,0.06)', padding: 12, marginBottom: 12, maxHeight: 200, overflowY: 'auto' }}>
+                                <div style={{ fontSize: 10, color: '#555', letterSpacing: 2, textAlign: 'center', marginBottom: 8 }}>
+                                    PLAYLIST
+                                </div>
+                                {tracks.map((track, index) => (
+                                    <div key={index}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 8,
+                                            padding: '6px 8px', marginBottom: 2, cursor: 'pointer',
+                                            background: index === currentTrackIndex ? 'rgba(200,50,50,0.15)' : 'transparent',
+                                            border: index === currentTrackIndex ? `1px solid ${RED}` : '1px solid transparent'
+                                        }}
+                                        onClick={() => loadTrackByIndex(index)}
+                                    >
+                                        <span style={{
+                                            flex: 1, fontSize: 13,
+                                            color: index === currentTrackIndex ? RED : '#333',
+                                            fontWeight: index === currentTrackIndex ? 700 : 400,
+                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                                        }}>
+                                            {track.name}
+                                        </span>
+                                        {index === currentTrackIndex && isPlaying && (
+                                            <span style={{ fontSize: 10, color: RED, letterSpacing: 1 }}>PLAYING</span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Game Meters */}
+                        <div style={{ background: 'rgba(0,0,0,0.06)', padding: 12, border: gameMode ? `2px solid ${RED}` : '2px solid transparent' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: gameMode ? 12 : 0 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: gameMode ? RED : '#555', letterSpacing: 2 }}>
+                                    GAME METERS {gameMode ? '- ACTIVE' : ''}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const next = !gameMode;
+                                        setGameMode(next);
+                                        if (next) { setGameFocus(0); setGameFun(0); }
+                                        else { setGameFocus(null); setGameFun(null); }
+                                    }}
+                                    style={{ ...btnStyle(), padding: '4px 12px', fontSize: 10 }}
+                                >
+                                    {gameMode ? 'ON' : 'OFF'}
+                                </button>
+                            </div>
+
+                            {gameMode && (
+                                <div>
+                                    <div style={{ marginBottom: 10 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 4 }}>
+                                            <span style={{ color: '#555', letterSpacing: 1 }}>FOCUS</span>
+                                            <span style={{ color: RED }}>{gameFocus}%</span>
+                                        </div>
+                                        <div style={{ height: 8, background: '#000', position: 'relative' }}>
+                                            <div style={{ height: '100%', width: `${gameFocus}%`, background: RED }} />
+                                        </div>
+                                    </div>
+                                    <div style={{ marginBottom: 8 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 4 }}>
+                                            <span style={{ color: '#555', letterSpacing: 1 }}>FUN</span>
+                                            <span style={{ color: RED }}>{gameFun}%</span>
+                                        </div>
+                                        <div style={{ height: 8, background: '#000', position: 'relative' }}>
+                                            <div style={{ height: '100%', width: `${gameFun}%`, background: RED }} />
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'center', gap: 10, fontSize: 9, color: '#444', letterSpacing: 1, marginTop: 6 }}>
+                                        <span>SPD {computeFromMeters(gameFocus || 0, gameFun || 0).speed.toFixed(2)}x</span>
+                                        <span>DRV {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).dirt)}%</span>
+                                        <span>REV {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).reverb)}%</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{ textAlign: 'center', marginTop: 12, fontSize: 10, color: '#555', letterSpacing: 2 }}>
+                            BOTTOM SHELF
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<DJStand />);
+    </script>
+</body>
+</html>

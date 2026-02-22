@@ -1943,53 +1943,48 @@
             setupHoldButton('beerBtn', useBeer);
             setupHoldButton('wingBtn', useWing);
 
+            // iOS-safe tap handler: uses touchend with preventDefault to avoid
+            // double-fire, falls back to click for desktop
+            function onTap(el, fn) {
+                el.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fn(e);
+                });
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    fn(e);
+                });
+            }
+
             // Club rotation button
-            document.getElementById('clubBtn').addEventListener('click', cycleClub);
+            onTap(document.getElementById('clubBtn'), cycleClub);
 
             // Reset hole button
-            document.getElementById('resetHoleBtn').addEventListener('click', resetHole);
+            onTap(document.getElementById('resetHoleBtn'), resetHole);
 
             // Wind control buttons (practice mode)
             document.querySelectorAll('.wind-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    setWind(parseFloat(btn.dataset.wind));
-                });
+                onTap(btn, () => setWind(parseFloat(btn.dataset.wind)));
             });
 
             // iPod controls — route through DJ Stand
-            document.getElementById('centerButton').addEventListener('click', (e) => {
-                e.stopPropagation();
-                sendToDJ({ type: 'togglePlay' });
-            });
-            document.getElementById('playBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                sendToDJ({ type: 'togglePlay' });
-            });
-            document.getElementById('pauseBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                sendToDJ({ type: 'togglePlay' });
-            });
-            document.getElementById('prevBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                sendToDJ({ type: 'skipTrack', direction: -1 });
-            });
-            document.getElementById('nextBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                sendToDJ({ type: 'skipTrack', direction: 1 });
-            });
+            onTap(document.getElementById('centerButton'), () => sendToDJ({ type: 'togglePlay' }));
+            onTap(document.getElementById('playBtn'), () => sendToDJ({ type: 'togglePlay' }));
+            onTap(document.getElementById('pauseBtn'), () => sendToDJ({ type: 'togglePlay' }));
+            onTap(document.getElementById('prevBtn'), () => sendToDJ({ type: 'skipTrack', direction: -1 }));
+            onTap(document.getElementById('nextBtn'), () => sendToDJ({ type: 'skipTrack', direction: 1 }));
 
             // Tap iPod screen to open DJ overlay
-            document.getElementById('ipodScreen').addEventListener('click', openDJOverlay);
+            onTap(document.getElementById('ipodScreen'), openDJOverlay);
 
             // iPod power button — toggle game/free mix mode
-            document.getElementById('ipodPowerBtn').addEventListener('click', () => {
+            onTap(document.getElementById('ipodPowerBtn'), () => {
                 gameMusicMode = !gameMusicMode;
                 document.getElementById('ipodPowerBtn').classList.toggle('off', !gameMusicMode);
                 document.getElementById('ipodModeLabel').textContent = gameMusicMode ? 'GAME MODE' : 'FREE MIX';
                 document.getElementById('ipodModeDisplay').innerHTML = gameMusicMode ? '🎮 GAME' : '🎛️ FREE MIX';
                 if (gameMusicMode) {
-                    // Switching to game mode: send starting game values
                     if (gameStarted) {
                         const diff = totalStrokes - totalPar;
                         const focus = Math.max(0, Math.min(100, 50 - diff * 10));
@@ -1999,13 +1994,12 @@
                         sendToDJ({ type: 'setGameMode', enabled: true, focus: 50, fun: 0 });
                     }
                 } else {
-                    // Switching to free mix: reset faders to defaults
                     sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
                 }
             });
 
             // DJ overlay close
-            document.getElementById('djCloseBtn').addEventListener('click', closeDJOverlay);
+            onTap(document.getElementById('djCloseBtn'), closeDJOverlay);
             document.getElementById('djOverlay').addEventListener('click', (e) => {
                 if (e.target === document.getElementById('djOverlay')) closeDJOverlay();
             });

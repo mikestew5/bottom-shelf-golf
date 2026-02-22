@@ -2008,14 +2008,8 @@
                 document.getElementById('ipodModeLabel').textContent = gameMusicMode ? 'GAME MODE' : 'FREE MIX';
                 document.getElementById('ipodModeDisplay').innerHTML = gameMusicMode ? '🎮 GAME' : '🎛️ FREE MIX';
                 if (gameMusicMode) {
-                    if (gameStarted) {
-                        const diff = totalStrokes - totalPar;
-                        const focus = Math.max(0, Math.min(100, 50 - diff * 10));
-                        const fun = Math.min(100, getSwagPct() * 100);
-                        sendToDJ({ type: 'setGameMode', enabled: true, focus: focus, fun: fun });
-                    } else {
-                        sendToDJ({ type: 'setGameMode', enabled: true, focus: 50, fun: 0 });
-                    }
+                    // Just enable game mode — don't send meters (preserves current speed/song)
+                    sendToDJ({ type: 'setGameMode', enabled: true });
                 } else {
                     sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
                 }
@@ -3200,23 +3194,24 @@
                 if (mpChatMessages.length > 5) mpChatMessages.shift();
             }
 
+            // Only show floating popup for MP reactions — all other messages go to summary box only
+            if (extraClass !== 'mp-reaction') return;
+
             const rect = canvas.getBoundingClientRect();
             const scaleX = rect.width / CANVAS_WIDTH;
             const scaleY = rect.height / CANVAS_HEIGHT;
 
-            // Forward camera transform: game coords → screen coords on canvas
             const screenX = (x - cameraX) * cameraZoom + CANVAS_WIDTH / 2;
             const screenY = (y - cameraY) * cameraZoom + CANVAS_HEIGHT / 2;
 
             const feedback = document.createElement('div');
-            feedback.className = 'powerup-feedback' + (extraClass ? ' ' + extraClass : '');
+            feedback.className = 'powerup-feedback mp-reaction';
             feedback.textContent = text;
             feedback.style.left = (rect.left + screenX * scaleX + window.scrollX) + 'px';
             feedback.style.top = (rect.top + screenY * scaleY + window.scrollY) + 'px';
             document.body.appendChild(feedback);
 
-            const duration = extraClass === 'mp-reaction' ? 4000 : (frames || 60) * (1000 / 60);
-            setTimeout(() => feedback.remove(), duration);
+            setTimeout(() => feedback.remove(), 4000);
         }
 
         // ==================== DJ STAND BRIDGE ====================
@@ -3997,39 +3992,44 @@
 
             const BOX_X = PREDICTOR_X - 2;
             const BOX_Y = PREDICTOR_Y + PREDICTOR_H + 8;
-            const BOX_W = (SWAG_X + SWAG_W) - PREDICTOR_X + 4;
-            const LINE_H = 16;
-            const iconRowH = (displayBeers > 0 || displayCigs > 0) ? 28 : 0;
-            const BOX_H = Math.max(36, shotSummaryMessages.length * LINE_H + iconRowH + 12);
+            const BOX_W = (SWAG_X + SWAG_W) - PREDICTOR_X + 8;
+            const LINE_H = 26;
+            const beerCigH = (displayBeers > 0 || displayCigs > 0) ? 56 : 0;
+            const BOX_H = Math.max(50, shotSummaryMessages.length * LINE_H + beerCigH + 16);
 
             ctx.save();
             // Background
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
             ctx.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.lineWidth = 2;
             ctx.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
 
             // Bold black text messages
             ctx.fillStyle = '#000';
-            ctx.font = 'bold 11px sans-serif';
+            ctx.font = 'bold 18px sans-serif';
             ctx.textAlign = 'left';
             shotSummaryMessages.forEach((msg, i) => {
-                ctx.fillText(msg, BOX_X + 6, BOX_Y + 14 + i * LINE_H, BOX_W - 12);
+                ctx.fillText(msg, BOX_X + 8, BOX_Y + 22 + i * LINE_H, BOX_W - 16);
             });
 
-            // Beer/cig icons
-            const iconY = BOX_Y + 6 + shotSummaryMessages.length * LINE_H;
-            let iconX = BOX_X + 6;
-            if (displayBeers > 0 && beerImg.complete) {
-                for (let i = 0; i < displayBeers; i++) {
-                    ctx.drawImage(beerImg, iconX + i * 22, iconY, 20, 20);
+            // Beer/cig count text + icons
+            let countY = BOX_Y + 14 + shotSummaryMessages.length * LINE_H;
+            if (displayBeers > 0) {
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.fillText('Beers: ' + displayBeers, BOX_X + 8, countY + 14);
+                if (beerImg.complete) {
+                    ctx.drawImage(beerImg, BOX_X + BOX_W - 32, countY, 24, 24);
                 }
-                iconX += displayBeers * 22 + 4;
+                countY += 26;
             }
-            if (displayCigs > 0 && cigImg.complete) {
-                for (let i = 0; i < displayCigs; i++) {
-                    ctx.drawImage(cigImg, iconX + i * 22, iconY, 20, 20);
+            if (displayCigs > 0) {
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.fillText('Cigs: ' + displayCigs, BOX_X + 8, countY + 14);
+                if (cigImg.complete) {
+                    ctx.drawImage(cigImg, BOX_X + BOX_W - 32, countY, 24, 24);
                 }
             }
 
@@ -4037,69 +4037,64 @@
         }
 
         // ==================== SHOT STATS WINDOW (right side) ====================
-        const STATS_X = CANVAS_WIDTH - PREDICTOR_X - PREDICTOR_W;
+        const STATS_W = 150;
+        const STATS_H = 210;
+        const STATS_X = CANVAS_WIDTH - 10 - STATS_W;
         const STATS_Y = PREDICTOR_Y;
-        const STATS_W = PREDICTOR_W;
-        const STATS_H = 140;
+
+        // Helper: draw red text with black border
+        function drawRedBorderText(text, x, y, fontSize) {
+            ctx.font = 'bold ' + fontSize + 'px sans-serif';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.strokeText(text, x, y);
+            ctx.fillStyle = '#cc3333';
+            ctx.fillText(text, x, y);
+        }
 
         function drawShotStats() {
             if (!shotStatsVisible || replayingOpponentShot) return;
 
             ctx.save();
             // Background
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.fillRect(STATS_X, STATS_Y, STATS_W, STATS_H);
             // Red border
-            ctx.strokeStyle = 'rgba(200, 50, 50, 0.8)';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#cc3333';
+            ctx.lineWidth = 3;
             ctx.strokeRect(STATS_X, STATS_Y, STATS_W, STATS_H);
 
             ctx.textAlign = 'left';
-            const x = STATS_X + 6;
-            let y = STATS_Y + 16;
-            const lineH = 22;
+            const x = STATS_X + 10;
+            let y = STATS_Y + 28;
+            const lineH = 36;
 
             // Club name
-            ctx.fillStyle = '#FFD700';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.fillText(frozenStatClub.toUpperCase(), x, y);
+            drawRedBorderText(frozenStatClub.toUpperCase(), x, y, 20);
             y += lineH;
 
             // Ball speed
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.fillText(Math.round(frozenStatSpeed) + ' mph', x, y);
-            ctx.font = '8px sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.fillText('speed', x + 62, y);
+            drawRedBorderText(Math.round(frozenStatSpeed) + ' mph', x, y, 22);
             y += lineH;
 
             // Distance (live during flight)
             const dist = ballMoving ? shotCumulativeDistance * FEET_PER_PX : frozenStatDistance;
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.fillText(Math.round(dist) + ' ft', x, y);
-            ctx.font = '8px sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.fillText('path', x + 62, y);
+            drawRedBorderText(Math.round(dist) + ' ft', x, y, 22);
             y += lineH;
 
             // Air time
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.fillText(frozenStatAirTime.toFixed(1) + 's', x, y);
-            ctx.font = '8px sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.fillText('air', x + 62, y);
+            drawRedBorderText(frozenStatAirTime.toFixed(1) + 's air', x, y, 22);
             y += lineH;
 
             // Swag %
+            ctx.font = 'bold 22px sans-serif';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.strokeText(frozenStatSwag + '% swag', x, y);
             ctx.fillStyle = '#00ffdc';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.fillText(frozenStatSwag + '%', x, y);
-            ctx.font = '8px sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.fillText('swag', x + 62, y);
+            ctx.fillText(frozenStatSwag + '% swag', x, y);
 
             ctx.restore();
         }

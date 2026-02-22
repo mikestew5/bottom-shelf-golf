@@ -475,8 +475,9 @@
                     case 'setGameMode':
                         setGameMode(!!data.enabled);
                         if (data.enabled) {
-                            setGameFocus(data.focus ?? 50);
-                            setGameFun(data.fun ?? 0);
+                            // Only update meters if explicitly provided (preserves song on mode toggle)
+                            if (typeof data.focus === 'number') setGameFocus(data.focus);
+                            if (typeof data.fun === 'number') setGameFun(data.fun);
                         } else {
                             setGameFocus(null);
                             setGameFun(null);

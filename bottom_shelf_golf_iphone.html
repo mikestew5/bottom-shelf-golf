@@ -1224,7 +1224,7 @@
         // DJ Stand bridge
         const djFrame = document.getElementById('djStandFrame');
         let djOverlayOpen = false;
-        let gameMusicMode = true; // true = game controls music, false = free mix
+        let gameMusicMode = false; // true = game controls music, false = free mix (default: free mix ON)
         let currentSongName = 'Press Play';
 
         // Auto-play random song: browsers require a user gesture for audio,
@@ -1233,7 +1233,7 @@
         function tryStartMenuMusic() {
             if (menuMusicStarted) return;
             menuMusicStarted = true;
-            sendToDJ({ type: 'setGameMode', enabled: true, focus: 50, fun: 0 });
+            sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
             sendToDJ({ type: 'playRandom' });
             document.removeEventListener('click', tryStartMenuMusic, true);
             document.removeEventListener('touchstart', tryStartMenuMusic, true);
@@ -2067,7 +2067,7 @@
             // iPod power button — toggle game/free mix mode
             onTap(document.getElementById('ipodPowerBtn'), () => {
                 gameMusicMode = !gameMusicMode;
-                document.getElementById('ipodPowerBtn').classList.toggle('off', !gameMusicMode);
+                document.getElementById('ipodPowerBtn').classList.toggle('off', gameMusicMode);
                 if (gameMusicMode) {
                     // Just enable game mode — don't send meters (preserves current speed/song)
                     sendToDJ({ type: 'setGameMode', enabled: true });
@@ -3204,8 +3204,8 @@
             gameStarted = false;
             totalStrokes = 0;
             totalPar = 0;
-            sendToDJ({ type: 'setGameMode', enabled: false });
-            gameMusicMode = true;
+            sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
+            gameMusicMode = false;
             document.getElementById('ipodPowerBtn').classList.remove('off');
 
             // Cleanup multiplayer

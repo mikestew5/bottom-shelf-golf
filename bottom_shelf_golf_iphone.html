@@ -846,6 +846,19 @@
                 text-transform: uppercase;
                 letter-spacing: 1px;
             ">Leave</button>
+            <button id="mainMenuBtn" style="
+                padding: 3px 8px;
+                background: rgba(139, 69, 19, 0.8);
+                color: #FFD700;
+                border: 1px solid #FFD700;
+                border-radius: 4px;
+                font-family: 'Playfair Display', serif;
+                font-style: italic;
+                font-size: 9px;
+                cursor: pointer;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            ">Menu</button>
         </div>
 
         <!-- Wind bar: coins (left) | wind flag (center) | wind buttons (right, practice only) -->
@@ -1303,28 +1316,28 @@
         // ==================== PRO SHOP ====================
         const shopItems = [
             {
-                id: 'goldBall',
-                name: 'Gold Ball',
-                cost: 3,
-                description: 'A shiny gold golf ball'
-            },
-            {
                 id: 'eightBall',
                 name: '8-Ball',
                 cost: 8,
                 description: 'The classic pool 8-ball'
             },
             {
-                id: 'diamondBall',
-                name: 'Diamond Ball',
-                cost: 10,
-                description: 'A dazzling diamond golf ball'
-            },
-            {
                 id: 'camoBall',
                 name: 'Camo Ball',
-                cost: 15,
+                cost: 25,
                 description: 'A rugged camouflage golf ball'
+            },
+            {
+                id: 'goldBall',
+                name: 'Gold Ball',
+                cost: 50,
+                description: 'A shiny gold golf ball'
+            },
+            {
+                id: 'diamondBall',
+                name: 'Diamond Ball',
+                cost: 100,
+                description: 'A dazzling diamond golf ball'
             }
         ];
 
@@ -2032,6 +2045,9 @@
                     returnToMenu();
                 }
             });
+
+            // Main menu button (during gameplay)
+            onTap(document.getElementById('mainMenuBtn'), returnToMenu);
 
             // Wind control buttons (practice mode)
             document.querySelectorAll('.wind-btn').forEach(btn => {
@@ -3103,21 +3119,21 @@
             }
 
             if (strokes === 1) {
-                title.textContent = '🎉 HOLE IN ONE! 🎉';
+                title.textContent = 'HOLE IN ONE!';
             } else if (diff <= -2) {
-                title.textContent = '🦅 Eagle!';
+                title.textContent = 'Eagle!';
             } else if (diff === -1) {
-                title.textContent = '🐦 Birdie!';
+                title.textContent = 'Birdie!';
             } else if (diff === 0) {
-                title.textContent = '✅ Par!';
+                title.textContent = 'Par';
             } else if (diff === 1) {
-                title.textContent = '😬 Bogey!';
+                title.textContent = 'Bogey';
             } else if (diff === 2) {
-                title.textContent = '😩 Double Bogey';
+                title.textContent = 'Double Bogey';
             } else if (diff === 3) {
-                title.textContent = '😵 Triple Bogey';
+                title.textContent = 'Triple Bogey';
             } else {
-                title.textContent = '💀 A Lot Over Par :(';
+                title.textContent = 'A Lot Over Par';
             }
 
             strokesText.textContent = strokes + (strokes === 1 ? ' stroke' : ' strokes');
@@ -3446,6 +3462,36 @@
                 ctx.beginPath();
                 ctx.arc(ball.x, ball.y, pulseRadius, 0, Math.PI * 2);
                 ctx.stroke();
+                ctx.restore();
+            }
+
+            // Pulsating halo matching ball color/pattern (always visible)
+            if (!replayingOpponentShot) {
+                const haloPulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.004);
+                const haloRadius = ball.displayRadius + 5 + haloPulse * 4;
+                ctx.save();
+                let haloColor;
+                if (activeBall === 'diamondBall') {
+                    haloColor = `rgba(160, 216, 255, ${0.3 + haloPulse * 0.4})`;
+                } else if (activeBall === 'goldBall') {
+                    haloColor = `rgba(255, 215, 0, ${0.3 + haloPulse * 0.4})`;
+                } else if (activeBall === 'eightBall') {
+                    haloColor = `rgba(80, 0, 120, ${0.3 + haloPulse * 0.4})`;
+                } else if (activeBall === 'camoBall') {
+                    haloColor = `rgba(85, 107, 47, ${0.3 + haloPulse * 0.4})`;
+                } else {
+                    haloColor = `rgba(255, 255, 255, ${0.25 + haloPulse * 0.35})`;
+                }
+                const haloGrd = ctx.createRadialGradient(
+                    ball.x, ball.y, ball.displayRadius * 0.8,
+                    ball.x, ball.y, haloRadius
+                );
+                haloGrd.addColorStop(0, haloColor);
+                haloGrd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = haloGrd;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, haloRadius, 0, Math.PI * 2);
+                ctx.fill();
                 ctx.restore();
             }
 
@@ -4143,9 +4189,9 @@
 
             // Bold black text messages
             ctx.fillStyle = '#000';
-            ctx.font = 'bold 16px sans-serif';
+            ctx.font = 'bold 20px sans-serif';
             ctx.textAlign = 'left';
-            const LINE_H = 24;
+            const LINE_H = 28;
             shotSummaryMessages.forEach((msg, i) => {
                 const y = BOX_Y + 20 + i * LINE_H;
                 if (y < BOX_Y + BOX_H - 10) {
@@ -4157,16 +4203,16 @@
             let countY = BOX_Y + 12 + shotSummaryMessages.length * LINE_H;
             if (displayBeers > 0 && countY + 14 < BOX_Y + BOX_H - 4) {
                 ctx.fillStyle = '#000';
-                ctx.font = 'bold 14px sans-serif';
+                ctx.font = 'bold 16px sans-serif';
                 ctx.fillText('Beers: ' + displayBeers, BOX_X + 6, countY + 14);
                 if (beerImg.complete) {
                     ctx.drawImage(beerImg, BOX_X + BOX_W - 28, countY, 22, 22);
                 }
-                countY += 24;
+                countY += 28;
             }
             if (displayCigs > 0 && countY + 14 < BOX_Y + BOX_H - 4) {
                 ctx.fillStyle = '#000';
-                ctx.font = 'bold 14px sans-serif';
+                ctx.font = 'bold 16px sans-serif';
                 ctx.fillText('Cigs: ' + displayCigs, BOX_X + 6, countY + 14);
                 if (cigImg.complete) {
                     ctx.drawImage(cigImg, BOX_X + BOX_W - 28, countY, 22, 22);

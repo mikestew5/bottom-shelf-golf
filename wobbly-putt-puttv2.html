@@ -864,6 +864,21 @@
                         text-transform: uppercase;
                         letter-spacing: 1px;
                     ">Reset Hole</button>
+                    <button id="mainMenuBtn" style="
+                        width: 100%;
+                        margin-top: 4px;
+                        padding: 4px 0;
+                        background: rgba(139, 69, 19, 0.8);
+                        color: #FFD700;
+                        border: 1px solid #FFD700;
+                        border-radius: 6px;
+                        font-family: 'Playfair Display', serif;
+                        font-style: italic;
+                        font-size: 11px;
+                        cursor: pointer;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    ">Main Menu</button>
                 </div>
 
                 <!-- Wind controls (practice mode, between scoreboard and iPod) -->
@@ -1103,6 +1118,7 @@
         let ballTrail = []; // stores {x, y} positions while ball moves
         let foulHighlightTimer = 0; // frames remaining for foul pulse
         let fireworkParticles = []; // hole-in fireworks
+        let shotSummaryMessages = []; // messages collected during current shot
 
         // ==================== MULTIPLAYER STATE ====================
         let isMultiplayer = false;
@@ -1246,28 +1262,28 @@
         // ==================== PRO SHOP ====================
         const shopItems = [
             {
-                id: 'goldBall',
-                name: 'Gold Ball',
-                cost: 3,
-                description: 'A shiny gold golf ball'
-            },
-            {
                 id: 'eightBall',
                 name: '8-Ball',
                 cost: 8,
                 description: 'The classic pool 8-ball'
             },
             {
-                id: 'diamondBall',
-                name: 'Diamond Ball',
-                cost: 10,
-                description: 'A dazzling diamond golf ball'
-            },
-            {
                 id: 'camoBall',
                 name: 'Camo Ball',
-                cost: 15,
+                cost: 25,
                 description: 'A rugged camouflage golf ball'
+            },
+            {
+                id: 'goldBall',
+                name: 'Gold Ball',
+                cost: 50,
+                description: 'A shiny gold golf ball'
+            },
+            {
+                id: 'diamondBall',
+                name: 'Diamond Ball',
+                cost: 100,
+                description: 'A dazzling diamond golf ball'
             }
         ];
 
@@ -1835,6 +1851,7 @@
             ball.displayRadius = BALL_BASE_RADIUS;
             strokes = 0;
             ballMoving = false;
+            shotSummaryMessages = [];
             shotBendActive = false;
             shotCumulativeDistance = 0;
             bendMeter = 0;
@@ -1937,6 +1954,9 @@
 
             // Reset hole button
             document.getElementById('resetHoleBtn').addEventListener('click', resetHole);
+
+            // Main menu button (during gameplay)
+            document.getElementById('mainMenuBtn').addEventListener('click', returnToMenu);
 
             // Wind control buttons (practice mode)
             document.querySelectorAll('.wind-btn').forEach(btn => {
@@ -2244,6 +2264,9 @@
             if (selectedClub === 'driver' && isTeeShotActive && meterPower >= 0.95) {
                 showPowerupFeedback('💥', ball.x, ball.y, 120);
             }
+
+            // Freeze shot summary & stats
+            shotSummaryMessages = [];
 
             // Freeze predictor path and meters before ball starts moving
             frozenPredictorPoints = computePredictorPoints();
@@ -2969,21 +2992,21 @@
             updateMusicSpeed();
 
             if (strokes === 1) {
-                title.textContent = '🎉 HOLE IN ONE! 🎉';
+                title.textContent = 'HOLE IN ONE!';
             } else if (diff <= -2) {
-                title.textContent = '🦅 Eagle!';
+                title.textContent = 'Eagle!';
             } else if (diff === -1) {
-                title.textContent = '🐦 Birdie!';
+                title.textContent = 'Birdie!';
             } else if (diff === 0) {
-                title.textContent = '✅ Par!';
+                title.textContent = 'Par';
             } else if (diff === 1) {
-                title.textContent = '😬 Bogey!';
+                title.textContent = 'Bogey';
             } else if (diff === 2) {
-                title.textContent = '😩 Double Bogey';
+                title.textContent = 'Double Bogey';
             } else if (diff === 3) {
-                title.textContent = '😵 Triple Bogey';
+                title.textContent = 'Triple Bogey';
             } else {
-                title.textContent = '💀 A Lot Over Par :(';
+                title.textContent = 'A Lot Over Par';
             }
 
             strokesText.textContent = strokes + (strokes === 1 ? ' stroke' : ' strokes');
@@ -3039,6 +3062,7 @@
 
         function returnToMenu() {
             if (djOverlayOpen) closeDJOverlay();
+            shotSummaryMessages = [];
             document.querySelectorAll('.powerup-feedback').forEach(el => el.remove());
             document.getElementById('completionMessage').classList.remove('show');
             document.getElementById('leaderboardSection').style.display = 'none';
@@ -3137,6 +3161,16 @@
         }
 
         function showPowerupFeedback(text, x, y, frames, extraClass) {
+            // Collect into shot summary (skip MP reactions and powerup use messages)
+            if (extraClass !== 'mp-reaction' && !replayingOpponentShot && text !== '🍺 glug' && text !== '🍗 chomp') {
+                // Limit WHACK! to 2 per shot
+                if (text === '🌳 WHACK!' && shotSummaryMessages.filter(m => m === '🌳 WHACK!').length >= 2) {
+                    // Skip — already have 2 WHACK! messages this shot
+                } else {
+                    shotSummaryMessages.push(text);
+                }
+            }
+
             const rect = canvas.getBoundingClientRect();
             const scaleX = rect.width / CANVAS_WIDTH;
             const scaleY = rect.height / CANVAS_HEIGHT;
@@ -3278,6 +3312,37 @@
                 ctx.beginPath();
                 ctx.arc(ball.x, ball.y, pulseRadius, 0, Math.PI * 2);
                 ctx.stroke();
+                ctx.restore();
+            }
+
+            // Pulsating halo matching ball color/pattern (always visible)
+            if (!replayingOpponentShot) {
+                const haloPulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.004);
+                const haloRadius = ball.displayRadius + 5 + haloPulse * 4;
+                ctx.save();
+                let haloColor;
+                if (activeBall === 'diamondBall') {
+                    haloColor = `rgba(160, 216, 255, ${0.3 + haloPulse * 0.4})`;
+                } else if (activeBall === 'goldBall') {
+                    haloColor = `rgba(255, 215, 0, ${0.3 + haloPulse * 0.4})`;
+                } else if (activeBall === 'eightBall') {
+                    haloColor = `rgba(80, 0, 120, ${0.3 + haloPulse * 0.4})`;
+                } else if (activeBall === 'camoBall') {
+                    haloColor = `rgba(85, 107, 47, ${0.3 + haloPulse * 0.4})`;
+                } else {
+                    haloColor = `rgba(255, 255, 255, ${0.25 + haloPulse * 0.35})`;
+                }
+                // Draw soft radial glow
+                const haloGrd = ctx.createRadialGradient(
+                    ball.x, ball.y, ball.displayRadius * 0.8,
+                    ball.x, ball.y, haloRadius
+                );
+                haloGrd.addColorStop(0, haloColor);
+                haloGrd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = haloGrd;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, haloRadius, 0, Math.PI * 2);
+                ctx.fill();
                 ctx.restore();
             }
 
@@ -3924,6 +3989,44 @@
             ctx.setLineDash([]);
         }
 
+        // ==================== SHOT SUMMARY BOX (top-left corner) ====================
+        function drawShotSummary() {
+            if (replayingOpponentShot) return;
+            if (shotSummaryMessages.length === 0) return;
+
+            const BOX_X = 10;
+            const BOX_Y = 10;
+            const LINE_H = 28;
+            const PAD = 10;
+            const BOX_W = 180;
+            const BOX_H = PAD * 2 + shotSummaryMessages.length * LINE_H;
+
+            ctx.save();
+            // Background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+            ctx.beginPath();
+            ctx.roundRect(BOX_X, BOX_Y, BOX_W, BOX_H, 8);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.roundRect(BOX_X, BOX_Y, BOX_W, BOX_H, 8);
+            ctx.stroke();
+
+            // Bold white text messages
+            ctx.fillStyle = '#fff';
+            ctx.font = "bold 18px 'Playfair Display', serif";
+            ctx.textAlign = 'left';
+            shotSummaryMessages.forEach((msg, i) => {
+                const y = BOX_Y + PAD + 16 + i * LINE_H;
+                if (y < BOX_Y + BOX_H - 4) {
+                    ctx.fillText(msg, BOX_X + PAD, y, BOX_W - PAD * 2);
+                }
+            });
+
+            ctx.restore();
+        }
+
         // ==================== CAMERA ====================
         function updateCamera() {
             const maxZoom = CLUB_ZOOM[selectedClub];
@@ -4033,6 +4136,7 @@
             drawPredictorPath();
             drawFunMeter();
             drawSwagMeter();
+            drawShotSummary();
 
             // Border area: predictor + fun meter + swag meter
             const borderX = PREDICTOR_X - 2;

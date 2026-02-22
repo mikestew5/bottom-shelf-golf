@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bottom Shelf DJ Stand</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Courier New", monospace;
+        }
+
+        /* Fader slider styling */
+        input[type="range"].fader {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 12px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"].fader::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 38px;
+            height: 22px;
+            border-radius: 4px;
+            background: linear-gradient(to bottom, #e0e0e0, #a0a0a0);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+
+        input[type="range"].fader::-moz-range-thumb {
+            width: 38px;
+            height: 22px;
+            border-radius: 4px;
+            background: linear-gradient(to bottom, #e0e0e0, #a0a0a0);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.6);
+        }
+
+        input[type="range"].fader::-moz-range-track {
+            height: 12px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 6px;
+        }
+
+        input[type="range"].fader:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        input[type="range"].fader:disabled::-webkit-slider-thumb {
+            cursor: default;
+        }
+        input[type="range"].fader:disabled::-moz-range-thumb {
+            cursor: default;
+        }
+
+        @keyframes reelSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes btnPulse {
+            0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+            50% { box-shadow: 0 4px 20px rgba(59,130,246,0.5), 0 0 30px rgba(59,130,246,0.2); }
+        }
+
+        @keyframes btnPulseRed {
+            0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+            50% { box-shadow: 0 4px 20px rgba(220,38,38,0.5), 0 0 30px rgba(220,38,38,0.2); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // Lucide-style SVG icon components
+        const Play = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+        );
+
+        const Pause = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+        );
+
+        const RotateCcw = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+            </svg>
+        );
+
+        const SkipBack = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                <line x1="5" y1="19" x2="5" y2="5"></line>
+            </svg>
+        );
+
+        const SkipForward = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                <line x1="19" y1="5" x2="19" y2="19"></line>
+            </svg>
+        );
+
+        const Music = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+        );
+
+        const Maximize = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+        );
+
+        const Minimize = ({ size = 24, color = "currentColor" }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="4 14 10 14 10 20"></polyline>
+                <polyline points="20 10 14 10 14 4"></polyline>
+                <line x1="14" y1="10" x2="21" y2="3"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+        );
+
+        function DJStand() {
+            // Audio state
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [speed, setSpeed] = useState(1.0);
+            const [distortion, setDistortion] = useState(0);
+            const [reverb, setReverb] = useState(0);
+            const [lpf, setLpf] = useState(100);
+            const [masterVol, setMasterVol] = useState(80);
+            const [currentTime, setCurrentTime] = useState(0);
+            const [duration, setDuration] = useState(0);
+            const [tracks] = useState([
+                { name: 'Sure Is Cold', url: 'sureiscoldroughmaster.m4a' },
+                { name: 'Carolina Curveball', url: 'carolinacurveballroughmaster.m4a' },
+                { name: 'Yellow Pine', url: 'yellopineroughmaster.m4a' },
+                { name: 'Time', url: 'timeroughmaster.m4a' },
+                { name: 'Divorced', url: 'divorcedroughymaster.m4a' },
+                { name: 'U Don\'t (Wedding)', url: 'udont_weddingroughmaster.m4a' },
+                { name: 'Memphis', url: 'newmemphismix.m4a' }
+            ]);
+            const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
+            const [trackLoaded, setTrackLoaded] = useState(false);
+            const [loading, setLoading] = useState(false);
+
+            // Audio refs
+            const audioContextRef = useRef(null);
+            const audioBufferRef = useRef(null);
+            const sourceNodeRef = useRef(null);
+            const analyserRef = useRef(null);
+            const distortionNodeRef = useRef(null);
+            const gainNodeRef = useRef(null);
+            const lpfNodeRef = useRef(null);
+            const reverbConvolverRef = useRef(null);
+            const reverbWetGainRef = useRef(null);
+            const reverbDryGainRef = useRef(null);
+            const canvasRef = useRef(null);
+            const animationRef = useRef(null);
+            const initRef = useRef(false);
+            const timeIntervalRef = useRef(null);
+
+            // Playback position tracking
+            const playbackOffsetRef = useRef(0);
+            const contextStartTimeRef = useRef(0);
+            const speedRef = useRef(1.0);
+            const isPlayingRef = useRef(false);
+            const currentTrackIndexRef = useRef(-1);
+
+            // Fullscreen
+            const [isFullscreen, setIsFullscreen] = useState(false);
+
+            // Game meters
+            const [gameFocus, setGameFocus] = useState(null);
+            const [gameFun, setGameFun] = useState(null);
+            const [gameMode, setGameMode] = useState(false);
+
+            // Generate impulse response for convolution reverb
+            const generateImpulseResponse = (ctx, dur = 2, decay = 2) => {
+                const length = ctx.sampleRate * dur;
+                const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+                for (let ch = 0; ch < 2; ch++) {
+                    const data = impulse.getChannelData(ch);
+                    for (let i = 0; i < length; i++) {
+                        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+                    }
+                }
+                return impulse;
+            };
+
+            // Compute all effects from game meters
+            const computeFromMeters = (focus, fun) => {
+                const computedSpeed = Math.min(2.5, 0.6 + (focus / 100 * 0.4) + (fun / 100 * 1.5));
+                const computedDirt = Math.min(100, (focus / 100 * 25) + Math.min(75, fun / 60 * 75));
+                const computedReverb = Math.min(60, fun / 100 * 60);
+                const lpfFreq = 20000 - (fun / 100 * 15000);
+                const computedLpf = Math.max(0, Math.min(100, Math.log(lpfFreq / 200) / Math.log(100) * 100));
+                return { speed: computedSpeed, dirt: computedDirt, reverb: computedReverb, lpf: computedLpf };
+            };
+
+            // LPF slider (0-100) to frequency (200-20000 Hz) logarithmic mapping
+            const lpfToFreq = (val) => 200 * Math.pow(100, val / 100);
+
+            const getCurrentPosition = () => {
+                if (!isPlayingRef.current || !audioContextRef.current) return playbackOffsetRef.current;
+                const elapsed = audioContextRef.current.currentTime - contextStartTimeRef.current;
+                return playbackOffsetRef.current + elapsed * speedRef.current;
+            };
+
+            // Initialize Web Audio API — full chain
+            useEffect(() => {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                audioContextRef.current = ctx;
+
+                analyserRef.current = ctx.createAnalyser();
+                analyserRef.current.fftSize = 2048;
+                distortionNodeRef.current = ctx.createWaveShaper();
+                gainNodeRef.current = ctx.createGain();
+                gainNodeRef.current.gain.value = 0.8;
+
+                lpfNodeRef.current = ctx.createBiquadFilter();
+                lpfNodeRef.current.type = 'lowpass';
+                lpfNodeRef.current.frequency.value = 20000;
+
+                reverbConvolverRef.current = ctx.createConvolver();
+                reverbConvolverRef.current.buffer = generateImpulseResponse(ctx);
+                reverbWetGainRef.current = ctx.createGain();
+                reverbWetGainRef.current.gain.value = 0;
+                reverbDryGainRef.current = ctx.createGain();
+                reverbDryGainRef.current.gain.value = 1;
+
+                // Chain: Source → LPF → Distortion → [Dry + Wet(Convolver)] → Analyser → Master Gain → Out
+                lpfNodeRef.current.connect(distortionNodeRef.current);
+                distortionNodeRef.current.connect(reverbDryGainRef.current);
+                reverbDryGainRef.current.connect(analyserRef.current);
+                distortionNodeRef.current.connect(reverbConvolverRef.current);
+                reverbConvolverRef.current.connect(reverbWetGainRef.current);
+                reverbWetGainRef.current.connect(analyserRef.current);
+                analyserRef.current.connect(gainNodeRef.current);
+                gainNodeRef.current.connect(ctx.destination);
+
+                return () => {
+                    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+                    if (timeIntervalRef.current) clearInterval(timeIntervalRef.current);
+                    ctx.close();
+                };
+            }, []);
+
+            // Auto-load random track and attempt autoplay
+            useEffect(() => {
+                if (!initRef.current && tracks.length > 0) {
+                    initRef.current = true;
+                    const randIdx = Math.floor(Math.random() * tracks.length);
+                    loadTrackByIndex(randIdx, true);
+                }
+            }, []);
+
+            // Time display updater
+            useEffect(() => {
+                if (isPlaying) {
+                    timeIntervalRef.current = setInterval(() => {
+                        setCurrentTime(Math.min(getCurrentPosition(), duration));
+                    }, 80);
+                } else {
+                    if (timeIntervalRef.current) clearInterval(timeIntervalRef.current);
+                }
+                return () => { if (timeIntervalRef.current) clearInterval(timeIntervalRef.current); };
+            }, [isPlaying, duration]);
+
+            // Apply game meters
+            useEffect(() => {
+                if (gameMode && gameFocus !== null && gameFun !== null) {
+                    const { speed, dirt, reverb, lpf } = computeFromMeters(gameFocus, gameFun);
+                    setSpeedDirect(speed);
+                    setDistortionDirect(dirt);
+                    setReverbDirect(reverb);
+                    setLpfDirect(lpf);
+                }
+            }, [gameMode, gameFocus, gameFun]);
+
+            // Start playback from current offset
+            const startPlayback = () => {
+                if (!audioBufferRef.current || !audioContextRef.current) return;
+                if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
+
+                const source = audioContextRef.current.createBufferSource();
+                source.buffer = audioBufferRef.current;
+                source.playbackRate.value = speedRef.current;
+                source.connect(lpfNodeRef.current);
+
+                source.onended = () => {
+                    if (sourceNodeRef.current === source) {
+                        isPlayingRef.current = false;
+                        setIsPlaying(false);
+                        playbackOffsetRef.current = 0;
+                        setCurrentTime(0);
+                        autoAdvance();
+                    }
+                };
+
+                const offset = Math.max(0, Math.min(playbackOffsetRef.current, audioBufferRef.current.duration - 0.01));
+                source.start(0, offset);
+                sourceNodeRef.current = source;
+                contextStartTimeRef.current = audioContextRef.current.currentTime;
+                isPlayingRef.current = true;
+                setIsPlaying(true);
+                drawWaveform();
+            };
+
+            // Stop playback, save position
+            const stopPlayback = () => {
+                if (sourceNodeRef.current) {
+                    const pos = getCurrentPosition();
+                    sourceNodeRef.current.onended = null;
+                    try { sourceNodeRef.current.stop(); } catch (e) {}
+                    sourceNodeRef.current.disconnect();
+                    sourceNodeRef.current = null;
+                    playbackOffsetRef.current = pos;
+                }
+                isPlayingRef.current = false;
+                if (animationRef.current) cancelAnimationFrame(animationRef.current);
+            };
+
+            const autoAdvance = () => {
+                const idx = currentTrackIndexRef.current;
+                if (tracks.length > 1) {
+                    const nextIdx = (idx + 1) % tracks.length;
+                    setTimeout(() => loadTrackByIndex(nextIdx), 100);
+                }
+            };
+
+            // Load track via XHR (works from file:// protocol)
+            const loadTrackByIndex = async (index, autoPlay = true) => {
+                if (index < 0 || index >= tracks.length) return;
+                stopPlayback();
+                setLoading(true);
+                setCurrentTrackIndex(index);
+                currentTrackIndexRef.current = index;
+                setTrackLoaded(false);
+                playbackOffsetRef.current = 0;
+                setCurrentTime(0);
+
+                try {
+                    const arrayBuffer = await new Promise((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('GET', tracks[index].url, true);
+                        xhr.responseType = 'arraybuffer';
+                        xhr.onload = () => {
+                            if (xhr.status === 200 || xhr.status === 0) resolve(xhr.response);
+                            else reject(new Error(`HTTP ${xhr.status}`));
+                        };
+                        xhr.onerror = () => reject(new Error('Failed to load audio file'));
+                        xhr.send();
+                    });
+
+                    const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+                    audioBufferRef.current = audioBuffer;
+                    setDuration(audioBuffer.duration);
+                    setTrackLoaded(true);
+                    setLoading(false);
+
+                    try { window.parent.postMessage({ type: 'trackChanged', name: tracks[index].name, index }, '*'); } catch(e) {}
+                    if (autoPlay) startPlayback();
+                } catch (err) {
+                    console.error('Failed to load audio:', err);
+                    setLoading(false);
+                }
+            };
+
+            // Warm tube distortion curve
+            const makeDistortionCurve = (amount) => {
+                const samples = 44100;
+                const curve = new Float32Array(samples);
+                for (let i = 0; i < samples; i++) {
+                    const x = (i * 2) / samples - 1;
+                    curve[i] = Math.tanh(x * (1 + amount / 10));
+                }
+                return curve;
+            };
+
+            // --- Control setters (sample-accurate, zero lag) ---
+
+            const setSpeedDirect = (val) => {
+                if (isPlayingRef.current) {
+                    playbackOffsetRef.current = getCurrentPosition();
+                    contextStartTimeRef.current = audioContextRef.current.currentTime;
+                }
+                speedRef.current = val;
+                setSpeed(val);
+                if (sourceNodeRef.current) sourceNodeRef.current.playbackRate.value = val;
+            };
+
+            const setDistortionDirect = (val) => {
+                setDistortion(val);
+                if (distortionNodeRef.current) {
+                    distortionNodeRef.current.curve = makeDistortionCurve(val / 10);
+                    distortionNodeRef.current.oversample = '4x';
+                }
+            };
+
+            const setReverbDirect = (val) => {
+                setReverb(val);
+                if (reverbWetGainRef.current && reverbDryGainRef.current) {
+                    reverbWetGainRef.current.gain.value = val / 100;
+                    reverbDryGainRef.current.gain.value = 1 - (val / 100);
+                }
+            };
+
+            const setLpfDirect = (val) => {
+                setLpf(val);
+                if (lpfNodeRef.current) {
+                    lpfNodeRef.current.frequency.value = lpfToFreq(val);
+                }
+            };
+
+            const setMasterDirect = (val) => {
+                setMasterVol(val);
+                if (gainNodeRef.current) gainNodeRef.current.gain.value = val / 100;
+            };
+
+            // Draw waveform
+            const drawWaveform = () => {
+                if (!analyserRef.current || !canvasRef.current) return;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const bufferLength = analyserRef.current.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                const draw = () => {
+                    animationRef.current = requestAnimationFrame(draw);
+                    analyserRef.current.getByteTimeDomainData(dataArray);
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.lineWidth = 2.5;
+                    ctx.strokeStyle = '#3b82f6';
+                    ctx.beginPath();
+                    const sliceWidth = canvas.width / bufferLength;
+                    let x = 0;
+                    for (let i = 0; i < bufferLength; i++) {
+                        const v = dataArray[i] / 128.0;
+                        const y = (v * canvas.height) / 2;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                        x += sliceWidth;
+                    }
+                    ctx.lineTo(canvas.width, canvas.height / 2);
+                    ctx.stroke();
+                };
+                draw();
+            };
+
+            const togglePlay = async () => {
+                if (!trackLoaded) return;
+                if (isPlayingRef.current) { stopPlayback(); setIsPlaying(false); }
+                else startPlayback();
+            };
+
+            const skipTrack = (direction) => {
+                if (tracks.length === 0) return;
+                const newIndex = (currentTrackIndexRef.current + direction + tracks.length) % tracks.length;
+                loadTrackByIndex(newIndex);
+            };
+
+            const resetControls = () => {
+                setSpeedDirect(1.0);
+                setDistortionDirect(0);
+                setReverbDirect(0);
+                setLpfDirect(100);
+                setMasterDirect(80);
+            };
+
+            // Fullscreen
+            const toggleFullscreen = () => {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                else document.exitFullscreen();
+            };
+
+            useEffect(() => {
+                const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+                document.addEventListener('fullscreenchange', onFsChange);
+                return () => document.removeEventListener('fullscreenchange', onFsChange);
+            }, []);
+
+            // postMessage listener
+            const commandHandlerRef = useRef(null);
+            commandHandlerRef.current = (data) => {
+                if (!data || !data.type) return;
+                switch (data.type) {
+                    case 'togglePlay': togglePlay(); break;
+                    case 'play':
+                        if (!isPlayingRef.current && trackLoaded) startPlayback();
+                        break;
+                    case 'pause':
+                        if (isPlayingRef.current) { stopPlayback(); setIsPlaying(false); }
+                        break;
+                    case 'skipTrack': skipTrack(data.direction || 1); break;
+                    case 'playRandom':
+                        if (tracks.length > 0) {
+                            const randIdx = Math.floor(Math.random() * tracks.length);
+                            loadTrackByIndex(randIdx);
+                        }
+                        break;
+                    case 'setGameMode':
+                        setGameMode(!!data.enabled);
+                        if (data.enabled) {
+                            setGameFocus(data.focus ?? 50);
+                            setGameFun(data.fun ?? 0);
+                        } else {
+                            setGameFocus(null);
+                            setGameFun(null);
+                            if (data.resetDefaults) {
+                                // Reset faders to neutral defaults for free mix
+                                setSpeedDirect(1.0);
+                                setDistortionDirect(0);
+                                setReverbDirect(0);
+                                setLpfDirect(100);
+                            }
+                        }
+                        break;
+                    case 'gameMeters':
+                        if (typeof data.focus === 'number') setGameFocus(data.focus);
+                        if (typeof data.fun === 'number') setGameFun(data.fun);
+                        break;
+                }
+            };
+
+            useEffect(() => {
+                const onMessage = (e) => { if (commandHandlerRef.current) commandHandlerRef.current(e.data); };
+                window.addEventListener('message', onMessage);
+                return () => window.removeEventListener('message', onMessage);
+            }, []);
+
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            // LPF display value
+            const lpfFreqVal = Math.round(lpfToFreq(lpf));
+            const lpfDisplay = lpfFreqVal >= 1000 ? `${(lpfFreqVal / 1000).toFixed(1)}k` : `${lpfFreqVal}`;
+
+            // Fader channel definitions
+            const faders = [
+                { label: 'SPEED', value: speed, min: 0.6, max: 2.5, step: 0.01, display: `${speed.toFixed(2)}x`, color: '#3b82f6', onChange: (v) => !gameMode && setSpeedDirect(v) },
+                { label: 'DRIVE', value: distortion, min: 0, max: 100, step: 1, display: `${distortion}%`, color: '#f59e0b', onChange: (v) => !gameMode && setDistortionDirect(v) },
+                { label: 'REVERB', value: reverb, min: 0, max: 100, step: 1, display: `${reverb}%`, color: '#7c3aed', onChange: (v) => !gameMode && setReverbDirect(v) },
+                { label: 'LPF', value: lpf, min: 0, max: 100, step: 1, display: lpfDisplay, color: '#10b981', onChange: (v) => !gameMode && setLpfDirect(v) },
+                { label: 'MASTER', value: masterVol, min: 0, max: 100, step: 1, display: `${masterVol}%`, color: '#ef4444', onChange: (v) => setMasterDirect(v) }
+            ];
+
+            // Reel component
+            const Reel = ({ size = 80 }) => (
+                <div style={{
+                    width: size, height: size,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle at 40% 35%, #3a3a3a, #1a1a1a 70%)',
+                    border: '2px solid #444',
+                    position: 'relative',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.08)',
+                    animation: isPlaying ? `reelSpin ${3 / speed}s linear infinite` : 'none'
+                }}>
+                    {/* Hub */}
+                    <div style={{
+                        position: 'absolute', top: '50%', left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: size * 0.3, height: size * 0.3,
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, #444, #222)',
+                        border: '1px solid #555'
+                    }} />
+                    {/* Spokes */}
+                    {[0, 120, 240].map(deg => (
+                        <div key={deg} style={{
+                            position: 'absolute', top: '50%', left: '50%',
+                            width: '2px', height: size * 0.35,
+                            background: 'rgba(255,255,255,0.06)',
+                            transformOrigin: 'top center',
+                            transform: `rotate(${deg}deg)`
+                        }} />
+                    ))}
+                </div>
+            );
+
+            return (
+                <div style={{
+                    minHeight: '100vh',
+                    background: 'linear-gradient(to bottom, #1a1a1a, #0a0a0a)',
+                    color: '#e5e5e5',
+                    fontFamily: '"Courier New", monospace',
+                    padding: '40px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <div style={{
+                        maxWidth: '900px', width: '100%',
+                        background: 'linear-gradient(145deg, #2a2a2a, #1f1f1f)',
+                        borderRadius: '24px',
+                        padding: '32px',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.1)',
+                        border: '1px solid #333'
+                    }}>
+
+                        {/* Header */}
+                        <div style={{
+                            textAlign: 'center', marginBottom: '24px',
+                            borderBottom: '1px solid #333', paddingBottom: '16px',
+                            position: 'relative'
+                        }}>
+                            <div style={{ fontSize: '0.75rem', letterSpacing: '3px', color: '#666', marginBottom: '4px' }}>
+                                BOTTOM SHELF
+                            </div>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0, letterSpacing: '2px' }}>
+                                BIG STUPID MUSIC MACHINE
+                            </h1>
+                            <button onClick={toggleFullscreen} style={{
+                                position: 'absolute', top: '0', right: '0',
+                                background: 'none', border: '1px solid #444', borderRadius: '8px',
+                                padding: '8px', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'border-color 0.15s'
+                            }}>
+                                {isFullscreen ? <Minimize size={16} color="#999" /> : <Maximize size={16} color="#999" />}
+                            </button>
+                        </div>
+
+                        {/* Waveform Display */}
+                        <div style={{
+                            background: '#000', borderRadius: '12px', padding: '12px',
+                            marginBottom: '20px', border: '2px solid #1a1a1a',
+                            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.8)'
+                        }}>
+                            <canvas ref={canvasRef} width={836} height={50}
+                                style={{ width: '100%', height: 'auto', borderRadius: '6px', display: 'block' }}
+                            />
+                        </div>
+
+                        {/* Now Playing / Loading */}
+                        {(trackLoaded || loading) && tracks[currentTrackIndex] && (
+                            <div style={{
+                                textAlign: 'center', marginBottom: '16px', padding: '10px 16px',
+                                background: 'linear-gradient(145deg, #252525, #1a1a1a)',
+                                borderRadius: '10px', border: '1px solid #333'
+                            }}>
+                                <div style={{ fontSize: '0.6rem', color: '#666', letterSpacing: '2px', marginBottom: '4px' }}>
+                                    {loading ? 'LOADING...' : 'NOW PLAYING'}
+                                </div>
+                                <div style={{ fontSize: '0.85rem', color: loading ? '#f59e0b' : '#3b82f6', fontWeight: '600' }}>
+                                    {tracks[currentTrackIndex].name}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Transport Controls */}
+                        <div style={{
+                            display: 'flex', gap: '16px', justifyContent: 'center', alignItems: 'center',
+                            marginBottom: '24px', padding: '20px',
+                            background: 'linear-gradient(145deg, #252525, #1a1a1a)',
+                            borderRadius: '16px', border: '1px solid #333'
+                        }}>
+                            <button onClick={() => skipTrack(-1)} disabled={tracks.length === 0}
+                                style={{
+                                    background: 'linear-gradient(145deg, #404040, #2a2a2a)',
+                                    border: 'none', borderRadius: '16px', width: '70px', height: '70px',
+                                    cursor: tracks.length > 0 ? 'pointer' : 'default',
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    opacity: tracks.length > 0 ? 1 : 0.4,
+                                    animation: tracks.length > 0 ? 'btnPulse 3s ease-in-out infinite' : 'none',
+                                    transition: 'transform 0.1s'
+                                }}>
+                                <SkipBack size={28} color="#ccc" />
+                            </button>
+
+                            <button onClick={togglePlay} disabled={!trackLoaded}
+                                style={{
+                                    background: !trackLoaded ? 'linear-gradient(145deg, #404040, #2a2a2a)'
+                                        : isPlaying ? 'linear-gradient(145deg, #dc2626, #991b1b)'
+                                        : 'linear-gradient(145deg, #3b82f6, #2563eb)',
+                                    border: 'none', borderRadius: '20px', width: '110px', height: '110px',
+                                    cursor: trackLoaded ? 'pointer' : 'default',
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    opacity: trackLoaded ? 1 : 0.5,
+                                    animation: trackLoaded ? (isPlaying ? 'btnPulseRed 2s ease-in-out infinite' : 'btnPulse 2s ease-in-out infinite') : 'none',
+                                    transition: 'transform 0.1s'
+                                }}>
+                                {isPlaying ? <Pause size={48} color="white" /> : <Play size={48} color="white" />}
+                            </button>
+
+                            <button onClick={() => skipTrack(1)} disabled={tracks.length === 0}
+                                style={{
+                                    background: 'linear-gradient(145deg, #404040, #2a2a2a)',
+                                    border: 'none', borderRadius: '16px', width: '70px', height: '70px',
+                                    cursor: tracks.length > 0 ? 'pointer' : 'default',
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    opacity: tracks.length > 0 ? 1 : 0.4,
+                                    animation: tracks.length > 0 ? 'btnPulse 3s ease-in-out infinite' : 'none',
+                                    transition: 'transform 0.1s'
+                                }}>
+                                <SkipForward size={28} color="#ccc" />
+                            </button>
+
+                            <button onClick={resetControls}
+                                style={{
+                                    background: 'linear-gradient(145deg, #404040, #2a2a2a)',
+                                    border: 'none', borderRadius: '14px', padding: '18px 22px',
+                                    color: '#ccc', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    fontSize: '0.75rem', letterSpacing: '1px', fontWeight: '600',
+                                    animation: 'btnPulse 3s ease-in-out infinite 1s',
+                                    transition: 'transform 0.1s'
+                                }}>
+                                <RotateCcw size={18} color="#ccc" /> RESET
+                            </button>
+                        </div>
+
+                        {/* Mixer Fader Section */}
+                        <div style={{
+                            position: 'relative',
+                            borderRadius: '12px',
+                            marginBottom: '24px',
+                            overflow: 'hidden',
+                            background: 'linear-gradient(145deg, #3a3a3a, #2a2a2a)',
+                            border: '1px solid #444',
+                            padding: '20px 8px 16px'
+                        }}>
+                            <h3 style={{
+                                fontSize: '0.7rem', fontWeight: '600', marginBottom: '12px',
+                                color: '#999', letterSpacing: '2px', textAlign: 'center',
+                                textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                                position: 'relative', zIndex: 1
+                            }}>
+                                MIXER {gameMode && '• GAME MODE'}
+                            </h3>
+                            <div style={{
+                                display: 'flex', flexDirection: 'column', gap: '8px',
+                                position: 'relative', zIndex: 1
+                            }}>
+                                {faders.map((f, i) => (
+                                    <div key={f.label} style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px'
+                                    }}>
+                                        {/* Channel label */}
+                                        <div style={{
+                                            fontSize: '0.6rem', color: '#ccc',
+                                            letterSpacing: '1.5px', fontWeight: '700',
+                                            textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                                            minWidth: '48px', textAlign: 'right'
+                                        }}>
+                                            {f.label}
+                                        </div>
+                                        {/* Fader track */}
+                                        <div style={{ flex: 1 }}>
+                                            <input
+                                                type="range"
+                                                className="fader"
+                                                min={f.min}
+                                                max={f.max}
+                                                step={f.step}
+                                                value={f.value}
+                                                onChange={(e) => f.onChange(parseFloat(e.target.value))}
+                                                disabled={gameMode && f.label !== 'MASTER'}
+                                            />
+                                        </div>
+                                        {/* Value readout */}
+                                        <div style={{
+                                            fontSize: '0.7rem', color: f.color,
+                                            fontFamily: '"Courier New", monospace', fontWeight: '600',
+                                            background: 'rgba(0,0,0,0.6)', padding: '2px 6px',
+                                            borderRadius: '4px', minWidth: '48px', textAlign: 'center',
+                                            textShadow: `0 0 6px ${f.color}44`
+                                        }}>
+                                            {f.display}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Reel-to-Reel + Time Display */}
+                        <div style={{
+                            display: 'flex', justifyContent: 'center', alignItems: 'center',
+                            gap: '30px', marginBottom: '24px',
+                            background: 'linear-gradient(145deg, #1a1a1a, #111)',
+                            borderRadius: '12px', padding: '20px',
+                            border: '1px solid #222'
+                        }}>
+                            <Reel size={80} />
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{
+                                    fontSize: '1.6rem', color: '#3b82f6',
+                                    fontFamily: '"Courier New", monospace',
+                                    letterSpacing: '2px', fontWeight: '700'
+                                }}>
+                                    {formatTime(currentTime)}
+                                </div>
+                                <div style={{ fontSize: '0.6rem', color: '#555', letterSpacing: '2px', marginTop: '4px' }}>
+                                    / {formatTime(duration)}
+                                </div>
+                            </div>
+                            <Reel size={80} />
+                        </div>
+
+                        {/* Playlist */}
+                        {tracks.length > 0 && (
+                            <div style={{
+                                background: 'linear-gradient(145deg, #252525, #1a1a1a)',
+                                borderRadius: '16px', padding: '20px',
+                                border: '1px solid #333', marginBottom: '24px',
+                                maxHeight: '240px', overflowY: 'auto'
+                            }}>
+                                <h3 style={{
+                                    fontSize: '0.7rem', fontWeight: '600', marginBottom: '12px',
+                                    color: '#999', letterSpacing: '2px', textAlign: 'center'
+                                }}>
+                                    PLAYLIST ({tracks.length} TRACK{tracks.length !== 1 ? 'S' : ''})
+                                </h3>
+                                {tracks.map((track, index) => (
+                                    <div key={index}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '10px',
+                                            padding: '8px 12px', borderRadius: '8px', marginBottom: '4px',
+                                            background: index === currentTrackIndex ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                                            border: index === currentTrackIndex ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent',
+                                            cursor: 'pointer', transition: 'all 0.15s'
+                                        }}
+                                        onClick={() => loadTrackByIndex(index)}
+                                    >
+                                        <Music size={14} color={index === currentTrackIndex ? '#3b82f6' : '#555'} />
+                                        <span style={{
+                                            flex: 1, fontSize: '0.75rem',
+                                            color: index === currentTrackIndex ? '#3b82f6' : '#aaa',
+                                            fontWeight: index === currentTrackIndex ? '600' : '400',
+                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                                        }}>
+                                            {track.name}
+                                        </span>
+                                        {index === currentTrackIndex && isPlaying && (
+                                            <span style={{ fontSize: '0.65rem', color: '#3b82f6', letterSpacing: '1px' }}>PLAYING</span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Game Meters (hidden integration panel) */}
+                        <div style={{
+                            background: 'linear-gradient(145deg, #252525, #1a1a1a)',
+                            borderRadius: '16px', padding: '20px',
+                            border: `1px solid ${gameMode ? '#3b82f6' : '#333'}`,
+                            transition: 'border-color 0.3s'
+                        }}>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                marginBottom: gameMode ? '16px' : '0'
+                            }}>
+                                <h3 style={{
+                                    fontSize: '0.7rem', fontWeight: '600',
+                                    color: gameMode ? '#3b82f6' : '#999',
+                                    letterSpacing: '2px', margin: 0
+                                }}>
+                                    GAME METERS {gameMode ? '• ACTIVE' : ''}
+                                </h3>
+                                <button
+                                    onClick={() => {
+                                        const next = !gameMode;
+                                        setGameMode(next);
+                                        if (next) { setGameFocus(0); setGameFun(0); }
+                                        else { setGameFocus(null); setGameFun(null); }
+                                    }}
+                                    style={{
+                                        background: gameMode ? 'linear-gradient(145deg, #3b82f6, #2563eb)' : 'linear-gradient(145deg, #404040, #2a2a2a)',
+                                        border: 'none', borderRadius: '8px', padding: '6px 14px',
+                                        color: gameMode ? '#fff' : '#999',
+                                        fontSize: '0.6rem', fontWeight: '700', letterSpacing: '1px',
+                                        cursor: 'pointer', transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {gameMode ? 'ON' : 'OFF'}
+                                </button>
+                            </div>
+
+                            {gameMode && (
+                                <div>
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <label style={{ fontSize: '0.65rem', color: '#999', letterSpacing: '1px' }}>FOCUS</label>
+                                            <span style={{ fontSize: '0.75rem', color: '#10b981', fontFamily: '"Courier New", monospace' }}>{gameFocus}%</span>
+                                        </div>
+                                        <input type="range" min="0" max="100" step="1" value={gameFocus || 0}
+                                            onChange={(e) => setGameFocus(parseInt(e.target.value))}
+                                            style={{
+                                                width: '100%', height: '6px', borderRadius: '3px', outline: 'none',
+                                                WebkitAppearance: 'none', appearance: 'none',
+                                                background: `linear-gradient(to right, #10b981 0%, #10b981 ${gameFocus}%, #1a1a1a ${gameFocus}%, #1a1a1a 100%)`,
+                                                cursor: 'pointer'
+                                            }} />
+                                    </div>
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <label style={{ fontSize: '0.65rem', color: '#999', letterSpacing: '1px' }}>FUN</label>
+                                            <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontFamily: '"Courier New", monospace' }}>{gameFun}%</span>
+                                        </div>
+                                        <input type="range" min="0" max="100" step="1" value={gameFun || 0}
+                                            onChange={(e) => setGameFun(parseInt(e.target.value))}
+                                            style={{
+                                                width: '100%', height: '6px', borderRadius: '3px', outline: 'none',
+                                                WebkitAppearance: 'none', appearance: 'none',
+                                                background: `linear-gradient(to right, #f59e0b 0%, #f59e0b ${gameFun}%, #1a1a1a ${gameFun}%, #1a1a1a 100%)`,
+                                                cursor: 'pointer'
+                                            }} />
+                                    </div>
+                                    <div style={{
+                                        display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap',
+                                        fontSize: '0.55rem', color: '#666', letterSpacing: '1px', marginTop: '8px'
+                                    }}>
+                                        <span>SPD {computeFromMeters(gameFocus || 0, gameFun || 0).speed.toFixed(2)}x</span>
+                                        <span>DRV {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).dirt)}%</span>
+                                        <span>REV {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).reverb)}%</span>
+                                        <span>LPF {Math.round(computeFromMeters(gameFocus || 0, gameFun || 0).lpf)}%</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.65rem', color: '#555', letterSpacing: '1px' }}>
+                            <p>BOTTOM SHELF</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<DJStand />);
+    </script>
+</body>
+</html>

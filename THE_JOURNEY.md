@@ -280,6 +280,71 @@ You mapped out an 8-week learning path:
 
 ---
 
+## Chapter 7: Mask Terrain Detection (The Eyes of the Course)
+
+The courses had always been beautiful — hand-drawn hole images with fairways, water hazards, sand traps, and tree lines. But the game couldn't *see* them. Collision detection was coordinate-based guesswork: hardcoded rectangles for water, rough estimates for sand. If you redrew a hole, you had to re-map every hazard by hand.
+
+The fix: **terrain masks**. Every course image gets a companion mask — a color-coded PNG where each pixel tells the game exactly what's there:
+
+| Color | Terrain | Game Effect |
+|-------|---------|-------------|
+| Blue | Water | Ball resets, +1 stroke |
+| Dark Green | Trees | Ball bounces/drags |
+| Yellow | Sand | Heavy friction |
+| Light Green | Putting Green | Club auto-switch |
+| White/Light | Out of Bounds | Edge collision |
+
+The mask images are invisible to the player — they're loaded into an offscreen canvas and sampled pixel-by-pixel as the ball moves. Functions like `isWater(x, y)`, `isTree(x, y)`, and `isSand(x, y)` replaced hundreds of lines of hardcoded collision zones.
+
+**Key concepts learned:**
+- Offscreen canvas rendering for pixel data extraction
+- `getImageData()` for reading individual pixel colors at any coordinate
+- Color-coded mask workflow: paint terrain types in Photoshop → export as PNG → game reads them programmatically
+- Fallback system: mask data first, pixel sampling from course image as backup
+
+This was the foundation that made everything after it possible — precise terrain meant better physics, better zoom, and eventually hole gravity.
+
+---
+
+## Chapter 8: Live Playtesting (Breaking Your Own Game)
+
+Two rounds of live multiplayer playtesting with the crew. Playing the game on phones, finding bugs, feeling what's wrong, and fixing it in real-time.
+
+### Round 1: The Big Patch (10 Items)
+
+The first playtest surfaced everything from multiplayer desyncs to missing features:
+
+1. **Reaction buttons reworked** — "Nice Shot!", "Oops!" became "Doug: I'm having fun", "CUZZY", "Cannonball" (with splash animation), "Nice Shot!", "wow"
+2. **Chat box repositioned** — moved from bottom-right to top-right, tap-to-close, auto-reopens on new messages
+3. **Shake-to-send hidden reaction** — phone shake triggers a secret "Fuck" reaction via DeviceMotion API. No button, no UI — completely hidden
+4. **Forgiving tab switching** — 30-second grace period for mobile backgrounding instead of instant disconnect. Lobby stays alive when host switches apps
+5. **Strikers zoom on driver shots** — Mario Super Strikers-style camera zoom on contact. Doubles as a multiplayer lag mask — both players watch the zoom animation, absorbing network jitter
+6. **Name length 4→5 + reserved names** — crew names protected with a shared password
+7. **Wind fix for opponent replays** — wind wasn't being applied during multiplayer shot replays, causing visual desync
+8. **Mini stock graph** — tiny trend line showing score-to-par across holes, green for birdies, red for bogeys
+9. **Wind reduction** — 20% less wind force on the ball
+10. **Tree collision forgiveness** — narrower bounce window so fewer mid-flight tree hits
+
+### Round 2: The Feel Patch (6 Items)
+
+Round 2 was about game feel — how the ball moves, how the camera frames the action, how multiplayer status communicates:
+
+1. **Score graph bug fix** — `holeIndex` was undefined in scope, should have been `currentHoleIndex`
+2. **Turn indicator rework** — removed the HTML overlay bar blocking the course. Replaced with a pulsing red canvas border when it's your turn, opponent's color when it's not. Player list moved into the chat box (always visible in MP)
+3. **Iron + putter zoom increase** — tighter camera framing now that masks provide precise boundaries
+4. **Iron power +20%** — iron felt inconsistent, max distance bumped from 45% to 54% of tee-to-hole
+5. **Hole gravity** — gravitational pull within 60px of the hole when ball is on the ground. Creates a satisfying "suck-in" effect. Visual hole indicator removed — the mask and course art handle it now
+6. **Ball travel slowdown** — same distances, 50% longer travel time. FRICTION 0.985→0.99, velocity scaled down proportionally. Tree bounce dampening halved (0.8→0.5) for less dramatic ricochets
+
+**Key concepts learned:**
+- Cherry-picking commits between branches
+- Feature branches: one branch per logical chunk, PR to merge, branch auto-deletes
+- The friction/velocity tradeoff: `distance = speed / (1 - friction)` — change both proportionally to alter travel time without changing distance
+- Canvas-based UI replacing HTML overlays for better integration with the game world
+- DeviceMotion API and iOS permission requirements for accelerometer access
+
+---
+
 ## Where You Are Now
 
 ```
@@ -292,16 +357,17 @@ bottomshelfgames.net ─── Cargo (website)
 
 **What's live:**
 - bottomshelfgames.net — your website, your domain
-- Bottom Shelf Golf — 18 holes, leaderboards, music, desktop + mobile
+- Bottom Shelf Golf — 18 holes, multiplayer, leaderboards, mask terrain, music, desktop + mobile
 - DJ Stand / Big Stupid Music Machine — playable music player
 
 **What's next:**
+- Content filter (hate speech blocker for names/lobbies)
+- Add sound effects to all games
 - Deploy Pool to GitHub Pages
 - Deploy Fishing to GitHub Pages
-- Add sound effects to all games
 - Consider vertical pool table layout for mobile
+- Desktop/mobile version parity (apply all changes to wobbly-putt-puttv2 + mobile)
 - Continue the training plan
-- Build automation scripts
 
 ---
 

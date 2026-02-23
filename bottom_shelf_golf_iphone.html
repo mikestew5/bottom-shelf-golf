@@ -1325,7 +1325,7 @@
 
         // Realistic stat constants
         const CLUB_AIR_TIME = { driver: 6.0, iron: 4.5, putter: 0 };
-        const MPH_PER_PX_FRAME = 30.22;  // 170 mph / 5.625 px/frame (full power driver)
+        const MPH_PER_PX_FRAME = 30.22;  // Display scaling factor for speed stats
         const PAR4_HOLE_FT = 650;          // Tuned tee-to-hole distance for realistic shot stats
 
         // Beer/cig images for summary box
@@ -1337,8 +1337,9 @@
         let mpChatVisible = true;
         let mpTurnOverlayVisible = false;
 
-        // Score trend graph (mini stock chart)
+        // Score trend graph (mini stock chart — looks like a 3-year stock history)
         let scoreHistory = []; // { hole, cumulative, diff }
+        let stockBaseData = []; // Pre-generated synthetic stock data
 
         // Post-shot spin state
         let isSpinDragging = false;
@@ -2131,6 +2132,7 @@
                 totalStrokes = 0;
                 totalPar = 0;
                 scoreHistory = [];
+                stockBaseData = generateStockData();
             }
 
             currentHoleIndex = holeIndex;
@@ -2644,12 +2646,22 @@
             // Swag bonus: 100% swag = 20% extra power
             power *= (1 + getSwagPct() * 0.20);
 
-            let speed = power * 0.075;
-
-            // Cap speed based on club max travel distance
-            const clubMaxDist = getClubMaxDistance();
-            const clubMaxSpeed = clubMaxDist * (1 - FRICTION);
-            speed = Math.min(speed, clubMaxSpeed);
+            let speed;
+            if (selectedClub === 'driver') {
+                // Driver speed scales with hole distance so full-power drives
+                // always reach 93.75% of the hole (CLUB_DISTANCE_FRACTION)
+                const driverMaxSpeed = getClubMaxDistance() * (1 - FRICTION);
+                speed = driverMaxSpeed * (power / MAX_POWER);
+                // Cap at 100% of hole distance (swag can push past 93.75% up to 100%)
+                const absoluteMax = holeStartDistance * (1 - FRICTION);
+                speed = Math.min(speed, absoluteMax);
+            } else {
+                speed = power * 0.075;
+                // Cap speed based on club max travel distance
+                const clubMaxDist = getClubMaxDistance();
+                const clubMaxSpeed = clubMaxDist * (1 - FRICTION);
+                speed = Math.min(speed, clubMaxSpeed);
+            }
 
             const dirX = dx / distance;
             const dirY = dy / distance;
@@ -2980,7 +2992,7 @@
                 const progress = Math.min(shotCumulativeDistance / shotExpectedDistance, 1);
                 if (progress < 0.80) {
                     const windMult = (progress < 0.30 || progress > 0.60) ? 0.5 : 1.0;
-                    const windForce = windDirection * windStrength * 0.0192 * windMult;
+                    const windForce = windDirection * windStrength * 0.012 * windMult;
                     ball.vx += windForce;
                 }
             }
@@ -3674,6 +3686,7 @@
             totalStrokes = 0;
             totalPar = 0;
             scoreHistory = [];
+            stockBaseData = [];
             sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
             gameMusicMode = false;
             document.getElementById('ipodPowerBtn').classList.remove('off');
@@ -4913,67 +4926,154 @@
         }
 
         // ==================== SCORE TREND GRAPH (mini stock chart) ====================
-        function drawScoreGraph() {
-            if (scoreHistory.length < 1) return;
-            const GW = 80, GH = 30;
-            const GX = 8, GY = 195;
+        function generateStockData() {
+            // Generate 36 points simulating 3 years of stock history
+            // Gradual upward trend with natural volatility peaks
+            const points = [];
+            let price = 100;
+            for (let i = 0; i < 36; i++) {
+                // Slight upward drift + random walk
+                const trend = 0.4;
+                const volatility = 3.5;
+                const noise = (Math.random() - 0.45) * volatility;
+                price += trend + noise;
+                // Occasional bigger peaks
+                if (Math.random() < 0.15) price += (Math.random() - 0.3) * 8;
+                price = Math.max(price, 80); // Floor
+                points.push(price);
+            }
+            return points;
+        }
 
-            let data = scoreHistory.map(s => s.cumulative);
-            while (data.length > 9) {
-                const avg = (data[0] + data[1]) / 2;
-                data.splice(0, 2, avg);
+        function drawScoreGraph() {
+            // Build display data: synthetic stock history + real score data
+            // As real holes are played, synthetic data compresses to make room
+            const MAX_DISPLAY_POINTS = 36;
+
+            // Convert score history to stock price movements
+            // Start from the last synthetic price, each hole moves price up (under par) or down (over par)
+            let realPrices = [];
+            if (scoreHistory.length > 0) {
+                const basePrice = stockBaseData.length > 0 ? stockBaseData[stockBaseData.length - 1] : 110;
+                let price = basePrice;
+                for (let i = 0; i < scoreHistory.length; i++) {
+                    // Under par = price goes up, over par = price goes down
+                    const diff = scoreHistory[i].diff;
+                    if (diff <= -2) price += 8;       // Eagle+
+                    else if (diff === -1) price += 4;  // Birdie
+                    else if (diff === 0) price += 1;   // Par (slight up)
+                    else if (diff === 1) price -= 3;   // Bogey
+                    else price -= 6;                   // Double bogey+
+                    // Add micro-volatility
+                    price += (Math.random() - 0.5) * 1.5;
+                    price = Math.max(price, 60);
+                    realPrices.push(price);
+                }
             }
 
-            const minVal = Math.min(0, ...data);
-            const maxVal = Math.max(0, ...data);
+            // Compress synthetic data to make room for real data
+            let syntheticDisplay = [...stockBaseData];
+            const realCount = realPrices.length;
+            const syntheticSlots = MAX_DISPLAY_POINTS - realCount;
+            if (syntheticSlots <= 0) {
+                syntheticDisplay = [];
+            } else {
+                // Compress synthetic data into available slots
+                while (syntheticDisplay.length > syntheticSlots) {
+                    // Average adjacent pairs from the oldest end
+                    const avg = (syntheticDisplay[0] + syntheticDisplay[1]) / 2;
+                    syntheticDisplay.splice(0, 2, avg);
+                }
+            }
+
+            // Combine
+            const data = [...syntheticDisplay, ...realPrices];
+            if (data.length < 2) return;
+
+            const GW = 100, GH = 36;
+            const GX = 8, GY = 188;
+
+            const minVal = Math.min(...data) - 2;
+            const maxVal = Math.max(...data) + 2;
             const range = Math.max(maxVal - minVal, 1);
 
             ctx.save();
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+
+            // Dark background
+            ctx.fillStyle = 'rgba(10, 14, 10, 0.7)';
             ctx.fillRect(GX, GY, GW, GH);
-
-            const zeroY = GY + GH - ((0 - minVal) / range) * GH;
-            ctx.strokeStyle = 'rgba(255,215,0,0.4)';
+            ctx.strokeStyle = 'rgba(68, 255, 68, 0.15)';
             ctx.lineWidth = 0.5;
-            ctx.setLineDash([2, 2]);
-            ctx.beginPath();
-            ctx.moveTo(GX, zeroY);
-            ctx.lineTo(GX + GW, zeroY);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.strokeRect(GX, GY, GW, GH);
 
-            const step = data.length > 1 ? GW / (data.length - 1) : GW;
+            // Subtle grid lines
+            for (let g = 0.25; g < 1; g += 0.25) {
+                const gy = GY + GH * g;
+                ctx.strokeStyle = 'rgba(68, 255, 68, 0.07)';
+                ctx.beginPath();
+                ctx.moveTo(GX, gy);
+                ctx.lineTo(GX + GW, gy);
+                ctx.stroke();
+            }
+
+            const step = GW / (data.length - 1);
+            const syntheticEnd = syntheticDisplay.length;
+
+            // Area fill under the line
+            ctx.beginPath();
+            ctx.moveTo(GX, GY + GH);
+            for (let i = 0; i < data.length; i++) {
+                const x = GX + i * step;
+                const y = GY + GH - ((data[i] - minVal) / range) * GH;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(GX + (data.length - 1) * step, GY + GH);
+            ctx.closePath();
+            const grad = ctx.createLinearGradient(GX, GY, GX, GY + GH);
+            // Green tint if current price >= start, red if below
+            const trending = data[data.length - 1] >= data[0];
+            if (trending) {
+                grad.addColorStop(0, 'rgba(68, 255, 68, 0.25)');
+                grad.addColorStop(1, 'rgba(68, 255, 68, 0.02)');
+            } else {
+                grad.addColorStop(0, 'rgba(255, 68, 68, 0.25)');
+                grad.addColorStop(1, 'rgba(255, 68, 68, 0.02)');
+            }
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Draw the line segment by segment
             for (let i = 0; i < data.length - 1; i++) {
                 const x1 = GX + i * step;
                 const x2 = GX + (i + 1) * step;
                 const y1 = GY + GH - ((data[i] - minVal) / range) * GH;
                 const y2 = GY + GH - ((data[i + 1] - minVal) / range) * GH;
 
-                const color = data[i + 1] < data[i] ? '#44ff44' : data[i + 1] > data[i] ? '#ff4444' : '#ffaa00';
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
+                // Synthetic data is dimmer, real data is bright
+                const isSynthetic = (i + 1) < syntheticEnd;
+                const isUp = data[i + 1] >= data[i];
+
+                if (isSynthetic) {
+                    ctx.strokeStyle = isUp ? 'rgba(68, 255, 68, 0.4)' : 'rgba(255, 68, 68, 0.3)';
+                    ctx.lineWidth = 1;
+                } else {
+                    ctx.strokeStyle = isUp ? '#44ff44' : '#ff4444';
+                    ctx.lineWidth = 2;
+                }
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
                 ctx.stroke();
-
-                ctx.fillStyle = data[i + 1] <= 0 && data[i] <= 0 ? 'rgba(68,255,68,0.15)' : 'rgba(255,68,68,0.15)';
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.lineTo(x2, zeroY);
-                ctx.lineTo(x1, zeroY);
-                ctx.closePath();
-                ctx.fill();
             }
 
-            if (data.length === 1) {
-                const py = GY + GH - ((data[0] - minVal) / range) * GH;
-                ctx.fillStyle = data[0] <= 0 ? '#44ff44' : '#ff4444';
-                ctx.beginPath();
-                ctx.arc(GX + GW / 2, py, 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            // Current price dot (last point)
+            const lastX = GX + (data.length - 1) * step;
+            const lastY = GY + GH - ((data[data.length - 1] - minVal) / range) * GH;
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.004);
+            ctx.fillStyle = trending ? `rgba(68, 255, 68, ${0.6 + pulse * 0.4})` : `rgba(255, 68, 68, ${0.6 + pulse * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, 2, 0, Math.PI * 2);
+            ctx.fill();
 
             ctx.restore();
         }
@@ -5076,10 +5176,18 @@
             } else {
                 power = MAX_POWER * meterPower;
             }
-            let speed = power * 0.075;
-            const clubMaxDist = getClubMaxDistance();
-            const clubMaxSpeed = clubMaxDist * (1 - FRICTION);
-            speed = Math.min(speed, clubMaxSpeed);
+            let speed;
+            if (selectedClub === 'driver') {
+                const driverMaxSpeed = getClubMaxDistance() * (1 - FRICTION);
+                speed = driverMaxSpeed * (power / MAX_POWER);
+                const absoluteMax = holeStartDistance * (1 - FRICTION);
+                speed = Math.min(speed, absoluteMax);
+            } else {
+                speed = power * 0.075;
+                const clubMaxDist = getClubMaxDistance();
+                const clubMaxSpeed = clubMaxDist * (1 - FRICTION);
+                speed = Math.min(speed, clubMaxSpeed);
+            }
             const actualTravelDist = speed / (1 - FRICTION);
 
             // Preview shows half of actual travel distance
@@ -5893,6 +6001,7 @@
                 const turnSlot = snap.val();
                 const wasMyTurn = isMyTurn;
                 isMyTurn = (turnSlot === mySlot);
+                currentTurnIndex = turnOrder.indexOf(turnSlot);
                 if (isMyTurn && !wasMyTurn) {
                     mpTurnOverlayVisible = true;
                 }
@@ -6232,7 +6341,7 @@
             const hx = currentHole.holePos.x;
             const hy = currentHole.holePos.y;
             const dist = Math.sqrt((ball.x - hx) ** 2 + (ball.y - hy) ** 2);
-            const holedOut = dist < 19; // holeRadius
+            const holedOut = dist < holeRadius;
 
             // Sync ball position
             currentLobby.child('game/balls/' + mySlot).set({

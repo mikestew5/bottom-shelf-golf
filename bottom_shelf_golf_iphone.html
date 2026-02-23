@@ -1113,15 +1113,8 @@
 
             <!-- Multiplayer HUD -->
             <div id="mpHUD" style="display:none; position:absolute; top:0; left:0; right:0; z-index:30; pointer-events:none;">
-                <div id="mpTurnIndicator" style="
-                    text-align:center; padding:4px 8px; font-family:'Playfair Display',serif;
-                    font-style:italic; font-size:12px; color:#FFD700; background:rgba(0,0,0,0.7);
-                    border-bottom:2px solid #FFD700;
-                "></div>
-                <div id="mpPlayerChips" style="
-                    display:flex; justify-content:center; gap:4px; flex-wrap:wrap;
-                    padding:3px 6px;
-                "></div>
+                <div id="mpTurnIndicator" style="display:none;"></div>
+                <div id="mpPlayerChips" style="display:none;"></div>
             </div>
 
             <!-- Reaction buttons (shown when not your turn) -->
@@ -1220,7 +1213,7 @@
         const CANVAS_WIDTH = 600;
         const CANVAS_HEIGHT = 800;
         const BALL_RADIUS = 10;
-        const FRICTION = 0.985;
+        const FRICTION = 0.99;
         const STOP_THRESHOLD = 0.15;
         const MAX_POWER = 100;
         // Putter/iron power curve: higher = more forgiving at low power
@@ -1289,13 +1282,15 @@
 
         let bendMeter = 0; // -5 to 5, starts at 0 (straight)
         let selectedClub = 'driver'; // driver, iron, putter
-        const CLUB_DISTANCE_FRACTION = { driver: 0.9375, iron: 0.45, putter: 0.15 }; // driver = 0.75 * 1.25
+        const CLUB_DISTANCE_FRACTION = { driver: 0.9375, iron: 0.54, putter: 0.15 }; // driver = 0.75 * 1.25
         let strokes = 0;
         let totalStrokes = 0; // Cumulative strokes across all holes
         let totalPar = 0; // Cumulative par across all holes played
         let holeStartDistance = 0; // Distance from tee to hole, set once per hole
         let isTeeShotActive = true; // True until first shot is taken
         let holeRadius = 19; // 3/4 of original 25
+        const HOLE_GRAVITY = 0.04;
+        const GRAVITY_RADIUS = 60;
 
         // Bend shot tracking
         let shotCumulativeDistance = 0;
@@ -1426,7 +1421,7 @@
         };
 
         // ==================== CAMERA / ZOOM ====================
-        const CLUB_ZOOM = { driver: 1.0, iron: 1.6, putter: 2.5 };
+        const CLUB_ZOOM = { driver: 1.0, iron: 2.2, putter: 3.2 };
         let cameraZoom = 1.0;
         let cameraTargetZoom = 1.0;
         let cameraX = CANVAS_WIDTH / 2;
@@ -2533,7 +2528,7 @@
                 const normalizedPower = rawPower / MAX_POWER;
                 const curvedPower = Math.pow(normalizedPower, POWER_CURVE_EXPONENT) * MAX_POWER;
                 const clubMaxSpeed = getClubMaxDistance() * (1 - FRICTION);
-                const maxPutterPower = clubMaxSpeed / 0.05625;
+                const maxPutterPower = clubMaxSpeed / 0.0375;
                 meterPower = Math.min(curvedPower / maxPutterPower, 1);
             }
         }
@@ -2628,13 +2623,13 @@
                 const normalizedShotPower = power / MAX_POWER;
                 power = Math.pow(normalizedShotPower, POWER_CURVE_EXPONENT) * MAX_POWER;
                 const maxClubSpeed = getClubMaxDistance() * (1 - FRICTION);
-                const maxClubPower = maxClubSpeed / 0.05625;
+                const maxClubPower = maxClubSpeed / 0.0375;
                 meterPower = Math.min(power / maxClubPower, 1); // Update visual bar
             }
             // Swag bonus: 100% swag = 20% extra power
             power *= (1 + getSwagPct() * 0.20);
 
-            let speed = power * 0.05625;
+            let speed = power * 0.0375;
 
             // Cap speed based on club max travel distance
             const clubMaxDist = getClubMaxDistance();
@@ -2975,6 +2970,27 @@
                 }
             }
 
+            // Hole gravity — pull ball toward hole when nearby and on the ground
+            const ballOnGroundForGrav = !shotExpectedDistance || ball.displayRadius <= BALL_BASE_RADIUS * 1.05;
+            if (ballOnGroundForGrav && currentHole && currentHole.holePos) {
+                const gdx = currentHole.holePos.x - ball.x;
+                const gdy = currentHole.holePos.y - ball.y;
+                const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
+                if (gDist > 0 && gDist < GRAVITY_RADIUS) {
+                    if (gDist < holeRadius) {
+                        // Ball is in the cup — snap to center and stop
+                        ball.x = currentHole.holePos.x;
+                        ball.y = currentHole.holePos.y;
+                        ball.vx = 0;
+                        ball.vy = 0;
+                    } else {
+                        const pullStrength = HOLE_GRAVITY * (1 - gDist / GRAVITY_RADIUS);
+                        ball.vx += (gdx / gDist) * pullStrength;
+                        ball.vy += (gdy / gDist) * pullStrength;
+                    }
+                }
+            }
+
             ball.vx *= FRICTION;
             ball.vy *= FRICTION;
 
@@ -3067,8 +3083,8 @@
 
                     // Reflect velocity: v' = v - 2(v·n)n, then apply 0.8 dampening
                     const dot = ball.vx * nx + ball.vy * ny;
-                    ball.vx = (ball.vx - 2 * dot * nx) * 0.8;
-                    ball.vy = (ball.vy - 2 * dot * ny) * 0.8;
+                    ball.vx = (ball.vx - 2 * dot * nx) * 0.5;
+                    ball.vy = (ball.vy - 2 * dot * ny) * 0.5;
 
                     // Disable bend after bounce
                     shotBendActive = false;
@@ -3507,7 +3523,7 @@
             // Accumulate totals
             totalStrokes += strokes;
             totalPar += currentHole.par;
-            scoreHistory.push({ hole: holeIndex, cumulative: totalStrokes - totalPar, diff: strokes - currentHole.par });
+            scoreHistory.push({ hole: currentHoleIndex, cumulative: totalStrokes - totalPar, diff: strokes - currentHole.par });
 
             // Hole summary on completion screen
             const summaryDiv = document.getElementById('completionSummary');
@@ -4113,19 +4129,6 @@
         }
 
         function drawHole() {
-            // Transparent scoring circle around the red flag
-            ctx.save();
-            ctx.globalAlpha = 0.15;
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            ctx.arc(currentHole.holePos.x, currentHole.holePos.y, holeRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 0.3;
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.restore();
-
             // Flag pole and waving flag — mirrors the wind flag exactly
             const hx = currentHole.holePos.x;
             const hy = currentHole.holePos.y;
@@ -4944,34 +4947,74 @@
         const CHAT_Y = 10;
         function drawMpChat() {
             if (!isMultiplayer) return;
+            if (!mpChatVisible) return;
             const now = Date.now();
             mpChatMessages = mpChatMessages.filter(m => now - m.time < 10000);
-            if (mpChatMessages.length === 0) return;
-            if (!mpChatVisible) return;
 
-            const LINE_H = 16;
+            const LINE_H = 15;
+            const PLAYER_H = 14;
+            const playerCount = turnOrder.length;
+            const msgCount = mpChatMessages.length;
+            const headerH = playerCount * PLAYER_H + 8;
+            const totalH = headerH + (msgCount > 0 ? msgCount * LINE_H + 6 : 0);
+            const boxH = Math.min(Math.max(totalH, headerH), CHAT_SIZE);
 
             ctx.save();
+            // Background
             ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.fillRect(CHAT_X, CHAT_Y, CHAT_SIZE, CHAT_SIZE);
+            ctx.fillRect(CHAT_X, CHAT_Y, CHAT_SIZE, boxH);
             ctx.strokeStyle = 'rgba(200, 50, 50, 0.8)';
             ctx.lineWidth = 2;
-            ctx.strokeRect(CHAT_X, CHAT_Y, CHAT_SIZE, CHAT_SIZE);
+            ctx.strokeRect(CHAT_X, CHAT_Y, CHAT_SIZE, boxH);
 
+            // Close x
             ctx.fillStyle = 'rgba(0,0,0,0.4)';
             ctx.font = '12px sans-serif';
             ctx.textAlign = 'right';
             ctx.fillText('x', CHAT_X + CHAT_SIZE - 6, CHAT_Y + 14);
 
-            ctx.fillStyle = '#000';
-            ctx.font = '11px sans-serif';
+            // Player list
             ctx.textAlign = 'left';
-            mpChatMessages.forEach((msg, i) => {
-                const y = CHAT_Y + 14 + i * LINE_H;
-                if (y < CHAT_Y + CHAT_SIZE - 4) {
-                    ctx.fillText(msg.text, CHAT_X + 6, y, CHAT_SIZE - 12);
-                }
+            const currentTurnSlot = turnOrder[currentTurnIndex] || turnOrder[0];
+            turnOrder.forEach((slot, i) => {
+                const state = mpPlayerStates[slot] || {};
+                const name = getMpPlayerNameBySlot(slot);
+                const y = CHAT_Y + 13 + i * PLAYER_H;
+                const isActive = slot === currentTurnSlot;
+                const color = SLOT_COLORS[slot] || '#333';
+
+                // Colored dot
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(CHAT_X + 10, y - 3, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Name + strokes
+                ctx.font = isActive ? 'bold 11px sans-serif' : '11px sans-serif';
+                ctx.fillStyle = state.holedOut ? '#999' : '#000';
+                const label = `${name} (${state.strokes || 0})${state.holedOut ? ' \u2713' : ''}`;
+                ctx.fillText(label, CHAT_X + 20, y, CHAT_SIZE - 30);
             });
+
+            // Divider + messages
+            if (msgCount > 0) {
+                const divY = CHAT_Y + headerH - 2;
+                ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(CHAT_X + 4, divY);
+                ctx.lineTo(CHAT_X + CHAT_SIZE - 4, divY);
+                ctx.stroke();
+
+                ctx.fillStyle = '#333';
+                ctx.font = '10px sans-serif';
+                mpChatMessages.forEach((msg, i) => {
+                    const y = divY + 12 + i * LINE_H;
+                    if (y < CHAT_Y + boxH - 4) {
+                        ctx.fillText(msg.text, CHAT_X + 6, y, CHAT_SIZE - 12);
+                    }
+                });
+            }
             ctx.restore();
         }
 
@@ -4996,7 +5039,7 @@
             } else {
                 power = MAX_POWER * meterPower;
             }
-            let speed = power * 0.05625;
+            let speed = power * 0.0375;
             const clubMaxDist = getClubMaxDistance();
             const clubMaxSpeed = clubMaxDist * (1 - FRICTION);
             speed = Math.min(speed, clubMaxSpeed);
@@ -5191,6 +5234,24 @@
                 ctx.strokeStyle = `rgba(0, 255, 220, ${alpha})`;
                 ctx.lineWidth = width;
                 ctx.strokeRect(borderX - offset - width / 2, borderY - offset - width / 2, borderW + offset * 2 + width, borderH + offset * 2 + width);
+                ctx.restore();
+            }
+
+            // Multiplayer turn indicator — pulsing canvas border
+            if (isMultiplayer) {
+                ctx.save();
+                if (isMyTurn) {
+                    const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.005);
+                    ctx.strokeStyle = `rgba(255, 30, 30, ${0.4 + pulse * 0.6})`;
+                    ctx.lineWidth = 5;
+                } else {
+                    const currentTurnSlot = turnOrder[currentTurnIndex] || turnOrder[0];
+                    const slotColor = SLOT_COLORS[currentTurnSlot] || '#FFD700';
+                    ctx.strokeStyle = slotColor;
+                    ctx.lineWidth = 3;
+                    ctx.globalAlpha = 0.6;
+                }
+                ctx.strokeRect(1, 1, CANVAS_WIDTH - 2, CANVAS_HEIGHT - 2);
                 ctx.restore();
             }
 

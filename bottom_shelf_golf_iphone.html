@@ -5503,6 +5503,12 @@
                 let hasLobbies = false;
                 snapshot.forEach((child) => {
                     const lobby = child.val();
+                    // Garbage collect stale lobbies older than 2 hours
+                    const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
+                    if (lobby.created && lobby.created < twoHoursAgo) {
+                        child.ref.remove();
+                        return;
+                    }
                     if (lobby.status !== 'waiting' && lobby.status !== 'playing') return;
                     if (lobby.playerCount >= 4) return;
                     hasLobbies = true;
@@ -5625,6 +5631,14 @@
                     lobbyPlayers[child.key] = child.val();
                 });
                 renderMpLobbyPlayers();
+
+                // Check if lobby is empty (all players disconnected via onDisconnect)
+                const connectedCount = Object.values(lobbyPlayers).filter(p => p.connected).length;
+                if (connectedCount === 0 && currentLobby) {
+                    currentLobby.child('status').set('closed');
+                    currentLobby.remove();
+                    return;
+                }
 
                 // Auto-start when 2+ connected
                 const connected = Object.values(lobbyPlayers).filter(p => p.connected);
@@ -6413,8 +6427,8 @@
 
             const newTurnOrder = turnOrder.filter(s => !expiredSlots.includes(s));
             if (newTurnOrder.length < 1) {
-                // All players gone — close lobby
-                if (mySlot === 'p1' && currentLobby) {
+                // All players gone — any remaining player can close lobby
+                if (currentLobby) {
                     currentLobby.child('status').set('closed');
                     currentLobby.remove();
                 }
@@ -6465,15 +6479,17 @@
                 if (mySlot === 'p1') {
                     currentLobby.child('status').onDisconnect().cancel();
                 }
-                // Mark disconnected
+                // Mark disconnected + atomically decrement playerCount
+                const lobbyRefForCleanup = currentLobby;
                 currentLobby.child('players/' + myPlayerId + '/connected').set(false);
-                const count = Object.values(lobbyPlayers).filter(p => p.connected && p.slot !== mySlot).length;
-                currentLobby.child('playerCount').set(Math.max(0, count));
-                // Close and remove lobby if no connected players remain
-                if (count === 0) {
-                    currentLobby.child('status').set('closed');
-                    currentLobby.remove();
-                }
+                lobbyRefForCleanup.child('playerCount').transaction((count) => {
+                    return Math.max(0, (count || 1) - 1);
+                }, (error, committed, snapshot) => {
+                    if (!error && committed && snapshot.val() === 0) {
+                        lobbyRefForCleanup.child('status').set('closed');
+                        lobbyRefForCleanup.remove();
+                    }
+                });
             }
             currentLobby = null;
             currentLobbyId = null;

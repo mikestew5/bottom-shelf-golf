@@ -1126,6 +1126,9 @@
                 <button class="mode-btn mp-reaction-btn" data-reaction="wow" style="font-size:10px; padding:4px 8px;">wow</button>
             </div>
 
+            <!-- Rip It! button (YOUR TURN overlay dismiss) -->
+            <button id="mpRipItBtn" style="display:none; position:absolute; top:55%; left:50%; transform:translate(-50%,-50%); z-index:35; padding:14px 36px; font-size:22px; font-weight:bold; font-family:'Cormorant Garamond',serif; background:rgba(0,0,0,0.8); color:#FFD700; border:3px solid #FFD700; border-radius:12px; cursor:pointer; text-transform:uppercase; letter-spacing:2px;">Rip It!</button>
+
             <!-- Multiplayer Hole Scorecard -->
             <div id="mpScorecardOverlay" class="completion-message" style="display:none;">
                 <div id="mpScorecardTitle" class="completion-title" style="font-size:24px; margin-bottom:8px;">HOLE COMPLETE</div>
@@ -1213,7 +1216,7 @@
         const CANVAS_WIDTH = 600;
         const CANVAS_HEIGHT = 800;
         const BALL_RADIUS = 10;
-        const FRICTION = 0.985;
+        const FRICTION = 0.98;
         const STOP_THRESHOLD = 0.15;
         const MAX_POWER = 100;
         // Putter/iron power curve: higher = more forgiving at low power
@@ -1292,6 +1295,9 @@
         const HOLE_GRAVITY = 0.04;
         const GRAVITY_RADIUS = 60;
 
+        // Tree bounce slowdown (extra friction after WHACK)
+        let treeBounceSlowdown = 0;
+
         // Bend shot tracking
         let shotCumulativeDistance = 0;
         let shotExpectedDistance = 0;
@@ -1329,6 +1335,7 @@
         // Multiplayer chat box
         let mpChatMessages = []; // { text, time }
         let mpChatVisible = true;
+        let mpTurnOverlayVisible = false;
 
         // Score trend graph (mini stock chart)
         let scoreHistory = []; // { hole, cumulative, diff }
@@ -1421,7 +1428,7 @@
         };
 
         // ==================== CAMERA / ZOOM ====================
-        const CLUB_ZOOM = { driver: 1.0, iron: 2.2, putter: 3.2 };
+        const CLUB_ZOOM = { driver: 1.0, iron: 2.2, putter: 4.5 };
         let cameraZoom = 1.0;
         let cameraTargetZoom = 1.0;
         let cameraX = CANVAS_WIDTH / 2;
@@ -2232,6 +2239,7 @@
             ballMoving = false;
             shotBendActive = false;
             shotCumulativeDistance = 0;
+            treeBounceSlowdown = 0;
             bendMeter = 0;
             golfer.isFixed = false;
             golfer.isSwinging = false;
@@ -2435,6 +2443,12 @@
         function handleMouseDown(e) {
             if (!gameStarted) return;
             if (djOverlayOpen) return;
+            // Dismiss YOUR TURN overlay on tap
+            if (mpTurnOverlayVisible) {
+                mpTurnOverlayVisible = false;
+                document.getElementById('mpRipItBtn').style.display = 'none';
+                return;
+            }
             if (isMultiplayer && !isMyTurn) return;
             if (ballMoving) {
                 // Allow spin drag during flight (driver/iron only, with existing wobble)
@@ -2449,8 +2463,8 @@
             // Screen coords for UI hit testing
             const { x: sx, y: sy } = screenCoords(e);
 
-            // Check if clicking on predictor window, fun meter, or swag meter area
-            if (sx >= PREDICTOR_X && sx <= SWAG_X + SWAG_W && sy >= PREDICTOR_Y && sy <= PREDICTOR_Y + PREDICTOR_H) {
+            // Check if clicking on predictor window, fun meter, or swag meter area (hidden for putter)
+            if (selectedClub !== 'putter' && sx >= PREDICTOR_X && sx <= SWAG_X + SWAG_W && sy >= PREDICTOR_Y && sy <= PREDICTOR_Y + PREDICTOR_H) {
                 isDraggingMeter = true;
                 meterPower = Math.max(0, Math.min(1, 1 - (sy - FUN_Y) / FUN_H));
                 return;
@@ -2528,7 +2542,7 @@
                 const normalizedPower = rawPower / MAX_POWER;
                 const curvedPower = Math.pow(normalizedPower, POWER_CURVE_EXPONENT) * MAX_POWER;
                 const clubMaxSpeed = getClubMaxDistance() * (1 - FRICTION);
-                const maxPutterPower = clubMaxSpeed / 0.05625;
+                const maxPutterPower = clubMaxSpeed / 0.075;
                 meterPower = Math.min(curvedPower / maxPutterPower, 1);
             }
         }
@@ -2623,13 +2637,13 @@
                 const normalizedShotPower = power / MAX_POWER;
                 power = Math.pow(normalizedShotPower, POWER_CURVE_EXPONENT) * MAX_POWER;
                 const maxClubSpeed = getClubMaxDistance() * (1 - FRICTION);
-                const maxClubPower = maxClubSpeed / 0.05625;
+                const maxClubPower = maxClubSpeed / 0.075;
                 meterPower = Math.min(power / maxClubPower, 1); // Update visual bar
             }
             // Swag bonus: 100% swag = 20% extra power
             power *= (1 + getSwagPct() * 0.20);
 
-            let speed = power * 0.05625;
+            let speed = power * 0.075;
 
             // Cap speed based on club max travel distance
             const clubMaxDist = getClubMaxDistance();
@@ -2994,6 +3008,13 @@
             ball.vx *= FRICTION;
             ball.vy *= FRICTION;
 
+            // Post-tree-bounce extra friction (bleeds momentum after WHACK)
+            if (treeBounceSlowdown > 0) {
+                ball.vx *= 0.95;
+                ball.vy *= 0.95;
+                treeBounceSlowdown--;
+            }
+
             // Terrain-specific friction (only when ball is on the ground)
             const ballOnGround = !shotExpectedDistance || ball.displayRadius <= BALL_BASE_RADIUS * 1.05;
             if (ballOnGround) {
@@ -3091,6 +3112,7 @@
                     if (isAscending) treeBounceAscending = true;
                     else treeBounceDescending = true;
                     showPowerupFeedback('WHACK!', ball.x, ball.y - 20);
+                    treeBounceSlowdown = 30;
                 }
 
                 // Tree drag: slow ball through canopy even without bounce
@@ -3960,6 +3982,19 @@
                 ctx.restore();
             }
 
+            // Multiplayer turn indicator — pulsing red ring around ball (skip if tee pulse already showing)
+            if (isMultiplayer && isMyTurn && !ballMoving && !replayingOpponentShot && !isTeeShotActive) {
+                const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.006);
+                const pulseRadius = ball.displayRadius + 5 + pulse * 4;
+                ctx.save();
+                ctx.strokeStyle = `rgba(255, 30, 30, ${0.5 + pulse * 0.5})`;
+                ctx.lineWidth = 2.5 + pulse * 1.5;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, pulseRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
             // Pulsating halo matching ball color/pattern (always visible)
             if (!replayingOpponentShot) {
                 const haloPulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.004);
@@ -4493,6 +4528,7 @@
         const SWAG_H = FUN_H;
 
         function drawFunMeter() {
+            if (selectedClub === 'putter') return;
             ctx.save();
 
             // Background
@@ -4534,6 +4570,7 @@
         }
 
         function drawSwagMeter() {
+            if (selectedClub === 'putter') return;
             ctx.save();
 
             // Background
@@ -4615,6 +4652,7 @@
         }
 
         function drawPredictorPath() {
+            if (selectedClub === 'putter') return;
             const points = ballMoving ? frozenPredictorPoints : computePredictorPoints();
             if (!points) return;
 
@@ -4653,12 +4691,9 @@
             if (replayingOpponentShot) return;
             if (shotSummaryMessages.length === 0 && displayBeers === 0 && displayCigs === 0) return;
 
-            // Position: left side on holes 1, 4, 18; right side on others
-            const leftSideHoles = [1, 4, 18];
-            const isLeft = currentHole && leftSideHoles.includes(currentHole.id);
             const BOX_W = PREDICTOR_W;
             const BOX_H = PREDICTOR_Y - 20; // Fill space above predictor
-            const BOX_X = isLeft ? PREDICTOR_X : (CANVAS_WIDTH - PREDICTOR_X - BOX_W);
+            const BOX_X = PREDICTOR_X;
             const BOX_Y = 10;
 
             ctx.save();
@@ -5039,7 +5074,7 @@
             } else {
                 power = MAX_POWER * meterPower;
             }
-            let speed = power * 0.05625;
+            let speed = power * 0.075;
             const clubMaxDist = getClubMaxDistance();
             const clubMaxSpeed = clubMaxDist * (1 - FRICTION);
             speed = Math.min(speed, clubMaxSpeed);
@@ -5253,6 +5288,24 @@
                 }
                 ctx.strokeRect(1, 1, CANVAS_WIDTH - 2, CANVAS_HEIGHT - 2);
                 ctx.restore();
+            }
+
+            // YOUR TURN overlay (gray filter + text + Rip It button)
+            if (mpTurnOverlayVisible && isMultiplayer) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 48px "Cormorant Garamond", serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 4;
+                ctx.lineJoin = 'round';
+                ctx.strokeText('YOUR TURN', CANVAS_WIDTH / 2, CANVAS_HEIGHT * 0.4);
+                ctx.fillText('YOUR TURN', CANVAS_WIDTH / 2, CANVAS_HEIGHT * 0.4);
+                ctx.restore();
+                document.getElementById('mpRipItBtn').style.display = 'block';
             }
 
             // Spin widget (shown during ball flight with wobble)
@@ -5750,7 +5803,11 @@
             turnRef.on('value', (snap) => {
                 if (!snap.exists()) return;
                 const turnSlot = snap.val();
+                const wasMyTurn = isMyTurn;
                 isMyTurn = (turnSlot === mySlot);
+                if (isMyTurn && !wasMyTurn) {
+                    mpTurnOverlayVisible = true;
+                }
                 updateMpTurnIndicator();
                 updateMpPlayerChips();
                 toggleMpControls();
@@ -5942,6 +5999,12 @@
                 if (reactionBar) reactionBar.style.display = 'flex';
             }
         }
+
+        // Rip It! button (dismiss YOUR TURN overlay)
+        document.getElementById('mpRipItBtn').addEventListener('click', () => {
+            mpTurnOverlayVisible = false;
+            document.getElementById('mpRipItBtn').style.display = 'none';
+        });
 
         // Reaction buttons
         document.querySelectorAll('.mp-reaction-btn').forEach(btn => {
@@ -6349,7 +6412,14 @@
             if (expiredSlots.length === 0) return;
 
             const newTurnOrder = turnOrder.filter(s => !expiredSlots.includes(s));
-            if (newTurnOrder.length < 1) return;
+            if (newTurnOrder.length < 1) {
+                // All players gone — close lobby
+                if (mySlot === 'p1' && currentLobby) {
+                    currentLobby.child('status').set('closed');
+                    currentLobby.remove();
+                }
+                return;
+            }
 
             if (mySlot === 'p1') {
                 const currentTurnSlot = turnOrder[currentTurnIndex];
@@ -6382,6 +6452,8 @@
             mpFirstShotsDone = {};
             document.getElementById('mpHUD').style.display = 'none';
             document.getElementById('mpReactionBar').style.display = 'none';
+            document.getElementById('mpRipItBtn').style.display = 'none';
+            mpTurnOverlayVisible = false;
         }
 
         function cleanupMpLobby() {
@@ -6397,6 +6469,11 @@
                 currentLobby.child('players/' + myPlayerId + '/connected').set(false);
                 const count = Object.values(lobbyPlayers).filter(p => p.connected && p.slot !== mySlot).length;
                 currentLobby.child('playerCount').set(Math.max(0, count));
+                // Close and remove lobby if no connected players remain
+                if (count === 0) {
+                    currentLobby.child('status').set('closed');
+                    currentLobby.remove();
+                }
             }
             currentLobby = null;
             currentLobbyId = null;

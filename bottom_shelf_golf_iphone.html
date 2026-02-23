@@ -2980,7 +2980,7 @@
                 const progress = Math.min(shotCumulativeDistance / shotExpectedDistance, 1);
                 if (progress < 0.80) {
                     const windMult = (progress < 0.30 || progress > 0.60) ? 0.5 : 1.0;
-                    const windForce = windDirection * windStrength * 0.0192 * windMult;
+                    const windForce = windDirection * windStrength * 0.012 * windMult;
                     ball.vx += windForce;
                 }
             }

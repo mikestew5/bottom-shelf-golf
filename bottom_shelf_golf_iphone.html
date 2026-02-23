@@ -1213,7 +1213,7 @@
         const CANVAS_WIDTH = 600;
         const CANVAS_HEIGHT = 800;
         const BALL_RADIUS = 10;
-        const FRICTION = 0.99;
+        const FRICTION = 0.985;
         const STOP_THRESHOLD = 0.15;
         const MAX_POWER = 100;
         // Putter/iron power curve: higher = more forgiving at low power
@@ -1404,8 +1404,8 @@
         let strikerZoomTimer = 0;
         let pendingVX = 0, pendingVY = 0;
         const STRIKER_ZOOM_LEVEL = 3.5;
-        const STRIKER_ZOOM_FRAMES = 24; // ~400ms at 60fps
-        const STRIKER_CONTACT_FRAME = 14;
+        const STRIKER_ZOOM_FRAMES = 42; // ~700ms at 60fps
+        const STRIKER_CONTACT_FRAME = 24;
 
         // Golfer character
         let golfer = {
@@ -2528,7 +2528,7 @@
                 const normalizedPower = rawPower / MAX_POWER;
                 const curvedPower = Math.pow(normalizedPower, POWER_CURVE_EXPONENT) * MAX_POWER;
                 const clubMaxSpeed = getClubMaxDistance() * (1 - FRICTION);
-                const maxPutterPower = clubMaxSpeed / 0.0375;
+                const maxPutterPower = clubMaxSpeed / 0.05625;
                 meterPower = Math.min(curvedPower / maxPutterPower, 1);
             }
         }
@@ -2623,13 +2623,13 @@
                 const normalizedShotPower = power / MAX_POWER;
                 power = Math.pow(normalizedShotPower, POWER_CURVE_EXPONENT) * MAX_POWER;
                 const maxClubSpeed = getClubMaxDistance() * (1 - FRICTION);
-                const maxClubPower = maxClubSpeed / 0.0375;
+                const maxClubPower = maxClubSpeed / 0.05625;
                 meterPower = Math.min(power / maxClubPower, 1); // Update visual bar
             }
             // Swag bonus: 100% swag = 20% extra power
             power *= (1 + getSwagPct() * 0.20);
 
-            let speed = power * 0.0375;
+            let speed = power * 0.05625;
 
             // Cap speed based on club max travel distance
             const clubMaxDist = getClubMaxDistance();
@@ -5039,7 +5039,7 @@
             } else {
                 power = MAX_POWER * meterPower;
             }
-            let speed = power * 0.0375;
+            let speed = power * 0.05625;
             const clubMaxDist = getClubMaxDistance();
             const clubMaxSpeed = clubMaxDist * (1 - FRICTION);
             speed = Math.min(speed, clubMaxSpeed);

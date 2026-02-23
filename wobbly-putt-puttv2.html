@@ -1029,11 +1029,11 @@
         }
 
         const holes = [
-            { id: 1, name: 'HOLE 1', par: 4, image: 'assets/holes/1sthole.png', ballStart: imgToCanvas(145, 229), holePos: imgToCanvas(153, 26) },
-            { id: 2, name: 'HOLE 2', par: 4, image: 'assets/holes/2ndhole.png', ballStart: imgToCanvas(95, 236), holePos: imgToCanvas(113, 33) },
-            { id: 3, name: 'HOLE 3', par: 4, image: 'assets/holes/3rdhole.png', ballStart: imgToCanvas(96, 241), holePos: imgToCanvas(109, 24) },
-            { id: 4, name: 'HOLE 4', par: 4, image: 'assets/holes/4thhole.png', ballStart: imgToCanvas(138, 215), holePos: imgToCanvas(162, 23) },
-            { id: 18, name: 'HOLE 18', par: 4, image: 'assets/holes/18thhole.png', ballStart: imgToCanvas(133, 219), holePos: imgToCanvas(146, 23) }
+            { id: 1, name: 'HOLE 1', par: 4, image: 'assets/holes/1sthole.png', mask: 'assets/masks/1sthole_mask.png', ballStart: imgToCanvas(145, 229), holePos: imgToCanvas(153, 26) },
+            { id: 2, name: 'HOLE 2', par: 4, image: 'assets/holes/2ndhole.png', mask: 'assets/masks/2ndhole_mask.png', ballStart: imgToCanvas(95, 236), holePos: imgToCanvas(113, 33) },
+            { id: 3, name: 'HOLE 3', par: 4, image: 'assets/holes/3rdhole.png', mask: 'assets/masks/3rdhole_mask.png', ballStart: imgToCanvas(96, 241), holePos: imgToCanvas(109, 24) },
+            { id: 4, name: 'HOLE 4', par: 4, image: 'assets/holes/4thhole.png', mask: 'assets/masks/4thhole_mask.png', ballStart: imgToCanvas(138, 215), holePos: imgToCanvas(162, 23) },
+            { id: 18, name: 'HOLE 18', par: 4, image: 'assets/holes/18thhole.png', mask: 'assets/masks/18thhole_mask.png', ballStart: imgToCanvas(133, 219), holePos: imgToCanvas(146, 23) }
         ];
 
         // Music tracks (Bottom Shelf playlist)
@@ -1065,6 +1065,7 @@
         let currentHoleIndex = 0;
         let courseImage = null;
         let courseImageData = null; // For boundary detection
+        let maskImageData = null;   // For mask-based terrain detection
 
         let ball = {
             x: 300,
@@ -1127,6 +1128,7 @@
         let playerItems = {}; // { goldBall: true, ... }
         let activeBall = 'default'; // 'default', 'goldBall', 'diamondBall'
         let ballMoving = false;
+        let ballInSand = false; // Track sand trap entry for one-time feedback
         let ballTrail = []; // stores {x, y} positions while ball moves
         let foulHighlightTimer = 0; // frames remaining for foul pulse
         let fireworkParticles = []; // hole-in fireworks
@@ -1831,6 +1833,26 @@
                 // Draw once to get image data for boundary detection
                 ctx.drawImage(courseImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
                 courseImageData = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Load collision mask if available
+                maskImageData = null;
+                if (currentHole.mask) {
+                    const maskImg = new Image();
+                    maskImg.onload = function() {
+                        // Draw mask to offscreen canvas to extract pixel data
+                        const offscreen = document.createElement('canvas');
+                        offscreen.width = CANVAS_WIDTH;
+                        offscreen.height = CANVAS_HEIGHT;
+                        const offCtx = offscreen.getContext('2d');
+                        offCtx.drawImage(maskImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                        maskImageData = offCtx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                        console.log('Mask loaded:', currentHole.mask);
+                    };
+                    maskImg.onerror = function() {
+                        console.log('No mask found for', currentHole.name, '— using pixel detection fallback');
+                    };
+                    maskImg.src = currentHole.mask;
+                }
 
                 // Use hardcoded positions if set, otherwise auto-detect
                 if (!currentHole.holePos) {
@@ -2561,6 +2583,23 @@
             ball.vx *= FRICTION;
             ball.vy *= FRICTION;
 
+            // Terrain-specific friction (only when ball is on the ground)
+            const ballOnGround = !shotExpectedDistance || ball.displayRadius <= BALL_BASE_RADIUS * 1.05;
+            if (ballOnGround) {
+                const bx = Math.round(ball.x), by = Math.round(ball.y);
+                if (isSand(bx, by)) {
+                    // Sand trap: heavy drag
+                    ball.vx *= 0.92;
+                    ball.vy *= 0.92;
+                    if (!ballInSand) {
+                        ballInSand = true;
+                        showPowerupFeedback('BUNKER!', ball.x, ball.y - 20);
+                    }
+                } else {
+                    ballInSand = false;
+                }
+            }
+
             // Ball size animation based on travel progress (club-dependent)
             // Peak at 45% path, back to base at 90%, normal for last 10%
             if (shotExpectedDistance > 0) {
@@ -2761,26 +2800,59 @@
             }
         }
 
-        // Detect if pixel is white (course boundary)
-        function isCourseEdge(x, y) {
-            if (!courseImageData) return false;
-            
+        // --- Terrain detection (mask-based with pixel fallback) ---
+        // Mask colors: Red(255,0,0)=Tree, Blue(0,0,255)=Water, White(255,255,255)=OOB,
+        //              Green(0,200,0)=Fairway, LightGreen(144,238,144)=Putting Green,
+        //              Yellow(255,255,0)=Sand, Black(0,0,0)=Unclassified
+
+        function getMaskPixel(x, y) {
             x = Math.round(x);
             y = Math.round(y);
-            
+            if (x < 0 || x >= CANVAS_WIDTH || y < 0 || y >= CANVAS_HEIGHT) return null;
+            if (!maskImageData) return null;
+            const i = (y * CANVAS_WIDTH + x) * 4;
+            return {
+                r: maskImageData.data[i],
+                g: maskImageData.data[i + 1],
+                b: maskImageData.data[i + 2]
+            };
+        }
+
+        function getMaskTerrain(x, y) {
+            const p = getMaskPixel(x, y);
+            if (!p) return null; // No mask — caller uses fallback
+            // Match exact mask colors (with tolerance of 30 for hand-painted masks)
+            const t = 30;
+            if (p.r > 225 && p.g < t && p.b < t) return 'tree';
+            if (p.r < t && p.g < t && p.b > 225) return 'water';
+            if (p.r > 225 && p.g > 225 && p.b > 225) return 'boundary';
+            if (p.r < t && p.g > 170 && p.g < 230 && p.b < t) return 'fairway';
+            if (p.r > 114 && p.r < 174 && p.g > 208 && p.b > 114 && p.b < 174) return 'green';
+            if (p.r > 225 && p.g > 225 && p.b < t) return 'sand';
+            if (p.r < t && p.g < t && p.b < t) return 'unknown';
+            return 'fairway'; // Default: treat ambiguous mask pixels as playable
+        }
+
+        function isCourseEdge(x, y) {
+            const terrain = getMaskTerrain(x, y);
+            if (terrain !== null) return terrain === 'boundary';
+            // Fallback: pixel detection from course image
+            if (!courseImageData) return false;
+            x = Math.round(x);
+            y = Math.round(y);
             if (x < 0 || x >= CANVAS_WIDTH || y < 0 || y >= CANVAS_HEIGHT) return true;
-            
             const index = (y * CANVAS_WIDTH + x) * 4;
             const r = courseImageData.data[index];
             const g = courseImageData.data[index + 1];
             const b = courseImageData.data[index + 2];
-            
-            // White threshold - adjust if needed
             const threshold = 200;
             return r > threshold && g > threshold && b > threshold;
         }
 
         function isWater(x, y) {
+            const terrain = getMaskTerrain(x, y);
+            if (terrain !== null) return terrain === 'water';
+            // Fallback
             if (!courseImageData) return false;
             x = Math.round(x);
             y = Math.round(y);
@@ -2789,11 +2861,13 @@
             const r = courseImageData.data[i];
             const g = courseImageData.data[i + 1];
             const b = courseImageData.data[i + 2];
-            // Blue water: high blue, lower red and green
             return b > 150 && r < 120 && g < 180 && b > r && b > g;
         }
 
         function isGrass(x, y) {
+            const terrain = getMaskTerrain(x, y);
+            if (terrain !== null) return terrain === 'fairway' || terrain === 'green';
+            // Fallback
             if (!courseImageData) return false;
             x = Math.round(x);
             y = Math.round(y);
@@ -2802,11 +2876,13 @@
             const r = courseImageData.data[i];
             const g = courseImageData.data[i + 1];
             const b = courseImageData.data[i + 2];
-            // Green grass: high green, lower red and blue
             return g > 80 && g > r && g > b;
         }
 
         function isTree(x, y) {
+            const terrain = getMaskTerrain(x, y);
+            if (terrain !== null) return terrain === 'tree';
+            // Fallback
             if (!courseImageData) return false;
             x = Math.round(x);
             y = Math.round(y);
@@ -2815,8 +2891,19 @@
             const r = courseImageData.data[i];
             const g = courseImageData.data[i + 1];
             const b = courseImageData.data[i + 2];
-            // Dark green: green dominant, low overall brightness
             return g > 40 && g > r && g > b && (r + g + b) < 200 && r < 80;
+        }
+
+        function isSand(x, y) {
+            const terrain = getMaskTerrain(x, y);
+            if (terrain !== null) return terrain === 'sand';
+            return false; // No sand detection without mask
+        }
+
+        function isPuttingGreen(x, y) {
+            const terrain = getMaskTerrain(x, y);
+            if (terrain !== null) return terrain === 'green';
+            return false; // No putting green detection without mask
         }
 
         function checkWaterHazard() {

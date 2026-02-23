@@ -1292,8 +1292,8 @@
         let holeStartDistance = 0; // Distance from tee to hole, set once per hole
         let isTeeShotActive = true; // True until first shot is taken
         let holeRadius = 19; // 3/4 of original 25
-        const HOLE_GRAVITY = 0.04;
-        const GRAVITY_RADIUS = 60;
+        const HOLE_GRAVITY = 0.02;
+        const GRAVITY_RADIUS = 35;
 
         // Tree bounce slowdown (extra friction after WHACK)
         let treeBounceSlowdown = 0;
@@ -1405,6 +1405,7 @@
         const SLOT_COLORS = { p1: '#e74c3c', p2: '#3498db', p3: '#2ecc71', p4: '#f39c12' };
         let disconnectedTimestamps = {}; // { slot: timestamp } — grace period tracking
         const DISCONNECT_GRACE_MS = 30000; // 30 seconds before treating as gone
+        let isSpectating = false; // true when player joined mid-game, waiting for next hole
 
         // Strikers-style zoom on driver shots
         let strikerZoomActive = false;
@@ -3073,7 +3074,7 @@
                 const maxBounce = maxFrac * maxIncrease * BALL_BASE_RADIUS;
                 const bounceFlag = isAscending ? !treeBounceAscending : !treeBounceDescending;
 
-                if (increase >= minBounce && increase <= maxBounce && maxIncrease > 0 && bounceFlag) {
+                if (increase >= minBounce && increase <= maxBounce && maxIncrease > 0 && bounceFlag && progress >= 0.15) {
                     // Find bounce normal by sampling surrounding pixels
                     let nx = 0, ny = 0;
                     const sampleDist = 15;
@@ -3118,12 +3119,15 @@
                 // Tree drag: slow ball through canopy even without bounce
                 // More drag when ball is lower (descending/ground), less when high (peak)
                 // sizeScale 0 = ground level (max drag), 1 = peak height (min drag)
-                const heightRatio = maxIncrease > 0 ? increase / (maxIncrease * BALL_BASE_RADIUS) : 0;
-                const treeDrag = selectedClub === 'driver' ? 0.97 - (1 - heightRatio) * 0.04
-                               : selectedClub === 'iron' ? 0.98 - (1 - heightRatio) * 0.03
-                               : 0.95; // putter rolls through trees with heavy drag
-                ball.vx *= treeDrag;
-                ball.vy *= treeDrag;
+                // Skip tree drag for first 15% of ball path (same immunity as bounce)
+                if (progress >= 0.15) {
+                    const heightRatio = maxIncrease > 0 ? increase / (maxIncrease * BALL_BASE_RADIUS) : 0;
+                    const treeDrag = selectedClub === 'driver' ? 0.97 - (1 - heightRatio) * 0.04
+                                   : selectedClub === 'iron' ? 0.98 - (1 - heightRatio) * 0.03
+                                   : 0.95; // putter rolls through trees with heavy drag
+                    ball.vx *= treeDrag;
+                    ball.vy *= treeDrag;
+                }
             } else {
                 // Reset when ball leaves tree area
                 treeBounceAscending = false;
@@ -5308,6 +5312,23 @@
                 document.getElementById('mpRipItBtn').style.display = 'block';
             }
 
+            // Spectating label
+            if (isSpectating && isMultiplayer) {
+                ctx.save();
+                const specPulse = 0.6 + 0.4 * Math.sin(Date.now() * 0.003);
+                ctx.globalAlpha = specPulse;
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 20px "Cormorant Garamond", serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.lineJoin = 'round';
+                ctx.strokeText('SPECTATING — Next hole you\'re in!', CANVAS_WIDTH / 2, 30);
+                ctx.fillText('SPECTATING — Next hole you\'re in!', CANVAS_WIDTH / 2, 30);
+                ctx.restore();
+            }
+
             // Spin widget (shown during ball flight with wobble)
             if (ballMoving && shotBendActive && selectedClub !== 'putter' && !replayingOpponentShot) {
                 drawSpinWidget();
@@ -5514,14 +5535,15 @@
                     hasLobbies = true;
                     const item = document.createElement('div');
                     item.className = 'mp-lobby-item';
+                    const statusLabel = lobby.status === 'playing' ? ' <span style="color:#2ecc71; font-size:10px;">● LIVE</span>' : '';
                     item.innerHTML = `
-                        <span style="font-size:14px;">${lobby.name || 'Course'}</span>
+                        <span style="font-size:14px;">${lobby.name || 'Course'}${statusLabel}</span>
                         <span style="font-size:12px; color:#ccc;">${lobby.playerCount || 1}/4</span>
                     `;
                     const joinBtn = document.createElement('button');
                     joinBtn.className = 'mode-btn mode-btn-play';
                     joinBtn.style.cssText = 'font-size:12px; padding:4px 12px;';
-                    joinBtn.textContent = 'JOIN';
+                    joinBtn.textContent = lobby.status === 'playing' ? 'WATCH' : 'JOIN';
                     joinBtn.addEventListener('click', () => joinMpLobby(child.key));
                     item.appendChild(joinBtn);
                     list.appendChild(item);
@@ -5591,7 +5613,7 @@
 
             lobbyRef.once('value', (snapshot) => {
                 const lobby = snapshot.val();
-                if (!lobby || lobby.playerCount >= 4 || lobby.status !== 'waiting') return;
+                if (!lobby || lobby.playerCount >= 4 || (lobby.status !== 'waiting' && lobby.status !== 'playing')) return;
 
                 const existingSlots = [];
                 if (lobby.players) {
@@ -5612,7 +5634,11 @@
                 lobbyRef.update(updates).then(() => {
                     lobbyRef.child('players/' + myPlayerId + '/connected').onDisconnect().cancel();
                     lobbyRef.child('players/' + myPlayerId + '/connected').onDisconnect().set(false);
-                    showMpLobbyRoom();
+                    if (lobby.status === 'playing') {
+                        joinMpGameInProgress();
+                    } else {
+                        showMpLobbyRoom();
+                    }
                 });
             });
         }
@@ -5811,6 +5837,56 @@
             });
         }
 
+        // Mid-game join: enter as spectator until next hole
+        function joinMpGameInProgress() {
+            // Cleanup lobby room listeners (we skip showMpLobbyRoom)
+            for (const l of lobbyRoomListeners) { l.ref.off(l.event); }
+            lobbyRoomListeners = [];
+
+            isMultiplayer = true;
+            gameMode = 'play';
+            isSpectating = true;
+            isMyTurn = false;
+
+            currentLobby.child('game').once('value', (snap) => {
+                const game = snap.val();
+                if (!game || !game.turnOrder) return;
+
+                turnOrder = game.turnOrder || [];
+                currentTurnIndex = game.currentTurnIndex || 0;
+                mpPhase = game.phase || 'firstShots';
+                mpFirstShotsDone = game.firstShotsDone || {};
+                mpPlayerStates = game.playerStates || {};
+                mpCurrentHoleIndex = game.currentHole || 0;
+                mpScorecard = game.scorecard || {};
+                allPlayerBalls = {};
+
+                // Load player ball skins
+                turnOrder.forEach(slot => {
+                    const pName = getMpPlayerNameBySlot(slot);
+                    bankRef.child(pName).once('value', (bankSnap) => {
+                        const data = bankSnap.val() || {};
+                        if (mpPlayerStates[slot]) {
+                            mpPlayerStates[slot].activeBall = data.activeBall || 'default';
+                        }
+                    });
+                });
+
+                document.getElementById('lobbyScreen').style.display = 'none';
+                document.getElementById('startScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+                document.getElementById('mpHUD').style.display = 'block';
+
+                setupMpListeners();
+                updateMpTurnIndicator();
+                updateMpPlayerChips();
+                toggleMpControls();
+
+                gameStarted = true;
+                startHole(mpCurrentHoleIndex);
+            });
+        }
+
         // Firebase listeners
         function setupMpListeners() {
             const turnRef = currentLobby.child('game/turn');
@@ -5827,6 +5903,23 @@
                 toggleMpControls();
             });
             mpListeners.push({ ref: turnRef, event: 'value' });
+
+            // Listen for turnOrder changes (absorbs spectators into the game)
+            const turnOrderRef = currentLobby.child('game/turnOrder');
+            turnOrderRef.on('value', (snap) => {
+                if (!snap.exists()) return;
+                const newOrder = snap.val();
+                if (Array.isArray(newOrder)) {
+                    turnOrder = newOrder;
+                    // If we were spectating and now appear in turnOrder, we're in the game
+                    if (isSpectating && turnOrder.includes(mySlot)) {
+                        isSpectating = false;
+                        toggleMpControls();
+                    }
+                    updateMpPlayerChips();
+                }
+            });
+            mpListeners.push({ ref: turnOrderRef, event: 'value' });
 
             const shotRef = currentLobby.child('game/shot');
             shotRef.on('value', (snap) => {
@@ -6001,7 +6094,13 @@
             const clubBtn = document.getElementById('clubBtn');
             const reactionBar = document.getElementById('mpReactionBar');
 
-            if (isMyTurn) {
+            if (isSpectating) {
+                // Spectators can only send reactions
+                if (beerBtn) beerBtn.style.display = 'none';
+                if (wingBtn) wingBtn.style.display = 'none';
+                if (clubBtn) clubBtn.style.display = 'none';
+                if (reactionBar) reactionBar.style.display = 'flex';
+            } else if (isMyTurn) {
                 if (beerBtn) beerBtn.style.display = 'block';
                 if (wingBtn) wingBtn.style.display = 'block';
                 if (clubBtn) clubBtn.style.display = 'block';
@@ -6370,9 +6469,18 @@
 
             if (mySlot === 'p1') {
                 const nextHole = mpCurrentHoleIndex + 1;
+
+                // Absorb spectators: find connected players not yet in turnOrder
+                const connectedSlots = Object.values(lobbyPlayers)
+                    .filter(p => p.connected)
+                    .map(p => p.slot);
+                const newPlayers = connectedSlots.filter(s => !turnOrder.includes(s));
+                const updatedTurnOrder = [...turnOrder, ...newPlayers].sort();
+
                 const resetStates = {};
                 const resetFirstShots = {};
-                turnOrder.forEach(slot => {
+                const updatedScorecard = { ...mpScorecard };
+                updatedTurnOrder.forEach(slot => {
                     resetStates[slot] = {
                         ballX: 0, ballY: 0, strokes: 0,
                         holedOut: false,
@@ -6380,6 +6488,10 @@
                         selectedClub: 'driver'
                     };
                     resetFirstShots[slot] = false;
+                    // Initialize scorecard for new players (pad with 0s for missed holes)
+                    if (!updatedScorecard[slot]) {
+                        updatedScorecard[slot] = new Array(nextHole).fill(0);
+                    }
                 });
 
                 // New random wind for next hole
@@ -6391,11 +6503,13 @@
                     phase: 'firstShots',
                     firstShotsDone: resetFirstShots,
                     playerStates: resetStates,
-                    turn: turnOrder[0],
+                    turnOrder: updatedTurnOrder,
+                    turn: updatedTurnOrder[0],
                     currentTurnIndex: 0,
                     balls: null,
                     shot: null,
                     holeComplete: null,
+                    scorecard: updatedScorecard,
                     wind: { direction: newWindDir, strength: newWindStr }
                 });
             }
@@ -6468,6 +6582,7 @@
             document.getElementById('mpReactionBar').style.display = 'none';
             document.getElementById('mpRipItBtn').style.display = 'none';
             mpTurnOverlayVisible = false;
+            isSpectating = false;
         }
 
         function cleanupMpLobby() {

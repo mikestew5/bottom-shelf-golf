@@ -804,10 +804,15 @@
             <div style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 18px; color: #FFD700; margin-bottom: 10px;">
                 ENTER NAME (OPTIONAL)
             </div>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                <input type="text" id="mainNameInput" class="name-input" maxlength="4" placeholder="NAME"
+            <div id="mainNameRow" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <input type="text" id="mainNameInput" class="name-input" maxlength="5" placeholder="NAME"
                     autocomplete="off" style="width: 140px; font-size: 24px; padding: 10px;">
                 <button class="mode-btn" id="mainNameSubmit" style="font-size: 18px; padding: 10px 20px;">OK</button>
+            </div>
+            <div id="mainPasswordRow" style="display:none; margin-top:8px;">
+                <input type="password" id="mainPasswordInput" class="name-input" placeholder="PASSWORD" autocomplete="off" style="width:160px; font-size:18px; padding:8px;">
+                <button class="mode-btn" id="mainPasswordSubmit" style="font-size:16px; padding:8px 16px; margin-left:6px;">ENTER</button>
+                <div id="mainPasswordError" style="color:#ff4444; font-size:12px; margin-top:4px;"></div>
             </div>
         </div>
 
@@ -821,8 +826,13 @@
         <!-- Name Entry (play mode) -->
         <div id="nameEntry" class="name-entry" style="display:none;">
             <div class="name-entry-label">ENTER YOUR NAME</div>
-            <input type="text" id="playerNameInput" class="name-input" maxlength="4" placeholder="NAME" autocomplete="off">
+            <input type="text" id="playerNameInput" class="name-input" maxlength="5" placeholder="NAME" autocomplete="off">
             <button class="mode-btn mode-btn-play" id="nameSubmitBtn">START</button>
+            <div id="playPasswordRow" style="display:none; margin-top:8px;">
+                <input type="password" id="playPasswordInput" class="name-input" placeholder="PASSWORD" autocomplete="off" style="width:160px; font-size:18px; padding:8px;">
+                <button class="mode-btn" id="playPasswordSubmit" style="font-size:16px; padding:8px 16px; margin-left:6px;">ENTER</button>
+                <div id="playPasswordError" style="color:#ff4444; font-size:12px; margin-top:4px;"></div>
+            </div>
         </div>
 
         <!-- Hole Selection (practice mode) -->
@@ -929,8 +939,13 @@
             <!-- Step 1: Name Entry (only if no playerName) -->
             <div id="mpNameEntry" style="display:none;">
                 <p style="font-family:'Playfair Display',serif; font-style:italic; font-size:14px; color:#FFD700; margin-bottom:10px;">ENTER YOUR NAME</p>
-                <input type="text" id="mpNameInput" class="name-input" maxlength="4" placeholder="NAME" autocomplete="off" style="width:120px; font-size:24px; padding:6px; margin-bottom:10px;">
+                <input type="text" id="mpNameInput" class="name-input" maxlength="5" placeholder="NAME" autocomplete="off" style="width:120px; font-size:24px; padding:6px; margin-bottom:10px;">
                 <br><button class="mode-btn mode-btn-play" id="mpNameConfirmBtn" style="font-size:16px; padding:8px 20px;">LET'S GO</button>
+                <div id="mpPasswordRow" style="display:none; margin-top:8px;">
+                    <input type="password" id="mpPasswordInput" class="name-input" placeholder="PASSWORD" autocomplete="off" style="width:160px; font-size:18px; padding:8px;">
+                    <button class="mode-btn" id="mpPasswordSubmit" style="font-size:16px; padding:8px 16px; margin-left:6px;">ENTER</button>
+                    <div id="mpPasswordError" style="color:#ff4444; font-size:12px; margin-top:4px;"></div>
+                </div>
                 <br><button class="mode-btn" id="mpNameBackBtn" style="font-size:14px; padding:6px 16px; margin-top:10px;">BACK</button>
             </div>
 
@@ -1111,10 +1126,11 @@
 
             <!-- Reaction buttons (shown when not your turn) -->
             <div id="mpReactionBar" style="display:none; position:absolute; bottom:10px; left:0; right:0; z-index:20; justify-content:center; gap:4px; flex-wrap:wrap; padding:0 6px;">
+                <button class="mode-btn mp-reaction-btn" data-reaction="Doug: I'm having fun" style="font-size:9px; padding:4px 6px;">Doug: I'm having fun</button>
+                <button class="mode-btn mp-reaction-btn" data-reaction="CUZZY" style="font-size:10px; padding:4px 8px;">CUZZY</button>
+                <button class="mode-btn mp-reaction-btn" data-reaction="Cannonball" style="font-size:10px; padding:4px 8px;">Cannonball</button>
                 <button class="mode-btn mp-reaction-btn" data-reaction="Nice Shot!" style="font-size:10px; padding:4px 8px;">Nice Shot!</button>
-                <button class="mode-btn mp-reaction-btn" data-reaction="Oops!" style="font-size:10px; padding:4px 8px;">Oops!</button>
-                <button class="mode-btn mp-reaction-btn" data-reaction="Wow!" style="font-size:10px; padding:4px 8px;">Wow!</button>
-                <button class="mode-btn mp-reaction-btn" data-reaction="I'm having fun" style="font-size:10px; padding:4px 8px;">Fun!</button>
+                <button class="mode-btn mp-reaction-btn" data-reaction="wow" style="font-size:10px; padding:4px 8px;">wow</button>
             </div>
 
             <!-- Multiplayer Hole Scorecard -->
@@ -1196,6 +1212,10 @@
     </div>
 
     <script>
+        // ==================== RESERVED NAMES ====================
+        const RESERVED_NAMES = ['MIKE','MIKEY','STEW','DOUG','SAM','STEE','JAMIE','JIMBO','JAMES','RILEY','JACKY','BENNY','BEN','JAKE','ZOE','ANNA','LIV','KATE'];
+        const CREW_PASSWORD = 'bigballers420';
+
         // ==================== GAME CONFIGURATION ====================
         const CANVAS_WIDTH = 600;
         const CANVAS_HEIGHT = 800;
@@ -1313,6 +1333,10 @@
 
         // Multiplayer chat box
         let mpChatMessages = []; // { text, time }
+        let mpChatVisible = true;
+
+        // Score trend graph (mini stock chart)
+        let scoreHistory = []; // { hole, cumulative, diff }
 
         // Post-shot spin state
         let isSpinDragging = false;
@@ -1377,6 +1401,16 @@
         let replayingSlot = null; // which slot's shot we're replaying
         let myBallSaved = null; // save my ball state while replaying opponent shot
         const SLOT_COLORS = { p1: '#e74c3c', p2: '#3498db', p3: '#2ecc71', p4: '#f39c12' };
+        let disconnectedTimestamps = {}; // { slot: timestamp } — grace period tracking
+        const DISCONNECT_GRACE_MS = 30000; // 30 seconds before treating as gone
+
+        // Strikers-style zoom on driver shots
+        let strikerZoomActive = false;
+        let strikerZoomTimer = 0;
+        let pendingVX = 0, pendingVY = 0;
+        const STRIKER_ZOOM_LEVEL = 3.5;
+        const STRIKER_ZOOM_FRAMES = 24; // ~400ms at 60fps
+        const STRIKER_CONTACT_FRAME = 14;
 
         // Golfer character
         let golfer = {
@@ -1797,11 +1831,19 @@
             document.getElementById('playerNameInput').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') startPlayMode();
             });
+            document.getElementById('playPasswordSubmit').addEventListener('click', playPasswordCheck);
+            document.getElementById('playPasswordInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') playPasswordCheck();
+            });
 
             // Main menu name entry
             document.getElementById('mainNameSubmit').addEventListener('click', submitMainName);
             document.getElementById('mainNameInput').addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') submitMainName();
+            });
+            document.getElementById('mainPasswordSubmit').addEventListener('click', mainPasswordCheck);
+            document.getElementById('mainPasswordInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') mainPasswordCheck();
             });
 
             // Pro shop buttons
@@ -1865,19 +1907,58 @@
             const input = document.getElementById('mainNameInput');
             const name = input.value.trim().toUpperCase();
             if (name.length === 0) return;
+            if (RESERVED_NAMES.includes(name)) {
+                document.getElementById('mainNameSubmit').style.display = 'none';
+                document.getElementById('mainPasswordRow').style.display = 'block';
+                document.getElementById('mainPasswordInput').focus();
+                document.getElementById('mainPasswordError').textContent = '';
+                return;
+            }
             playerName = name;
             document.getElementById('mainNameEntry').style.display = 'none';
             document.getElementById('playerInfo').style.display = 'block';
             loadPlayerData(name);
+        }
+        function mainPasswordCheck() {
+            const pw = document.getElementById('mainPasswordInput').value;
+            if (pw === CREW_PASSWORD) {
+                playerName = document.getElementById('mainNameInput').value.trim().toUpperCase();
+                document.getElementById('mainPasswordRow').style.display = 'none';
+                document.getElementById('mainNameSubmit').style.display = '';
+                document.getElementById('mainNameEntry').style.display = 'none';
+                document.getElementById('playerInfo').style.display = 'block';
+                loadPlayerData(playerName);
+            } else {
+                document.getElementById('mainPasswordError').textContent = 'Wrong password';
+            }
         }
 
         function startPlayMode() {
             const input = document.getElementById('playerNameInput');
             const name = input.value.trim().toUpperCase();
             if (name.length === 0) return;
+            if (RESERVED_NAMES.includes(name)) {
+                document.getElementById('nameSubmitBtn').style.display = 'none';
+                document.getElementById('playPasswordRow').style.display = 'block';
+                document.getElementById('playPasswordInput').focus();
+                document.getElementById('playPasswordError').textContent = '';
+                return;
+            }
             playerName = name;
             loadPlayerData(name);
             startHole(0); // Start at hole 1
+        }
+        function playPasswordCheck() {
+            const pw = document.getElementById('playPasswordInput').value;
+            if (pw === CREW_PASSWORD) {
+                playerName = document.getElementById('playerNameInput').value.trim().toUpperCase();
+                document.getElementById('playPasswordRow').style.display = 'none';
+                document.getElementById('nameSubmitBtn').style.display = '';
+                loadPlayerData(playerName);
+                startHole(0);
+            } else {
+                document.getElementById('playPasswordError').textContent = 'Wrong password';
+            }
         }
 
         function loadHoleSelection() {
@@ -2046,6 +2127,7 @@
             if (!gameStarted) {
                 totalStrokes = 0;
                 totalPar = 0;
+                scoreHistory = [];
             }
 
             currentHoleIndex = holeIndex;
@@ -2385,6 +2467,12 @@
                 return;
             }
 
+            // Tap on MP chat box to close it
+            if (mpChatVisible && isMultiplayer && sx >= CHAT_X && sx <= CHAT_X + CHAT_SIZE && sy >= CHAT_Y && sy <= CHAT_Y + CHAT_SIZE) {
+                mpChatVisible = false;
+                return;
+            }
+
             // Game-world coords for ball interaction
             const { x: mx, y: my } = canvasCoords(e);
 
@@ -2557,8 +2645,8 @@
             const dirY = dy / distance;
             const finalAngle = Math.atan2(dirY, dirX);
 
-            ball.vx = Math.cos(finalAngle) * speed;
-            ball.vy = Math.sin(finalAngle) * speed;
+            const computedVX = Math.cos(finalAngle) * speed;
+            const computedVY = Math.sin(finalAngle) * speed;
 
             // Set up bend curve parameters
             shotTotalBendAngle = (bendMeter / 5) * BEND_MAX_ANGLE * 1.30; // 30% more bend than predictor shows
@@ -2582,6 +2670,19 @@
             golfer.swingTimer = 0;
             golfer.isSwinging = true;
 
+            // Strikers zoom for driver shots — delay ball movement
+            if (selectedClub === 'driver') {
+                pendingVX = computedVX;
+                pendingVY = computedVY;
+                strikerZoomActive = true;
+                strikerZoomTimer = 0;
+                ball.vx = 0;
+                ball.vy = 0;
+            } else {
+                ball.vx = computedVX;
+                ball.vy = computedVY;
+            }
+
             // BOOM popup on full-power driver tee shot
             if (selectedClub === 'driver' && isTeeShotActive && meterPower >= 0.95) {
                 showPowerupFeedback('BOOM!', ball.x, ball.y, 120);
@@ -2604,14 +2705,14 @@
                 frozenFlagTime = Date.now() * 0.004;
                 flagFrozen = true;
             }
-            const initialSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+            const initialSpeed = Math.sqrt(computedVX * computedVX + computedVY * computedVY);
             frozenStatSpeed = initialSpeed * MPH_PER_PX_FRAME;
             frozenStatAirTime = CLUB_AIR_TIME[selectedClub] * Math.sqrt(meterPower);
             frozenStatSwag = Math.round(getSwagPct() * 100);
             frozenStatClub = selectedClub;
             frozenStatDistance = 0;
 
-            ballMoving = true;
+            ballMoving = selectedClub !== 'driver'; // Driver: delayed until striker zoom releases
             isTeeShotActive = false;
             strokes++;
             updateScorePanel();
@@ -2863,11 +2964,11 @@
 
             // Wind effect (non-putter, ball in air)
             // Half strength while ascending (<30%) and descending (>60%), full strength 30-60%
-            if (windStrength > 0 && selectedClub !== 'putter' && shotExpectedDistance > 0 && !replayingOpponentShot) {
+            if (windStrength > 0 && selectedClub !== 'putter' && shotExpectedDistance > 0) {
                 const progress = Math.min(shotCumulativeDistance / shotExpectedDistance, 1);
                 if (progress < 0.80) {
                     const windMult = (progress < 0.30 || progress > 0.60) ? 0.5 : 1.0;
-                    const windForce = windDirection * windStrength * 0.024 * windMult;
+                    const windForce = windDirection * windStrength * 0.0192 * windMult;
                     ball.vx += windForce;
                 }
             }
@@ -2926,9 +3027,9 @@
                 const increase = ball.displayRadius - BALL_BASE_RADIUS;
                 const progress = shotExpectedDistance > 0 ? Math.min(shotCumulativeDistance / shotExpectedDistance, 1) : 0;
                 const isAscending = progress < 0.40;
-                const minFrac = selectedClub === 'driver' ? 0.10 :
-                                selectedClub === 'iron' ? 0.45 : 0.30;
-                const maxFrac = selectedClub === 'driver' ? 0.85 : 0.70;
+                const minFrac = selectedClub === 'driver' ? 0.12 :
+                                selectedClub === 'iron' ? 0.54 : 0.36;
+                const maxFrac = selectedClub === 'driver' ? 0.68 : 0.56;
                 const minBounce = minFrac * maxIncrease * BALL_BASE_RADIUS;
                 const maxBounce = maxFrac * maxIncrease * BALL_BASE_RADIUS;
                 const bounceFlag = isAscending ? !treeBounceAscending : !treeBounceDescending;
@@ -3404,6 +3505,7 @@
             // Accumulate totals
             totalStrokes += strokes;
             totalPar += currentHole.par;
+            scoreHistory.push({ hole: holeIndex, cumulative: totalStrokes - totalPar, diff: strokes - currentHole.par });
 
             // Hole summary on completion screen
             const summaryDiv = document.getElementById('completionSummary');
@@ -3527,6 +3629,7 @@
             gameStarted = false;
             totalStrokes = 0;
             totalPar = 0;
+            scoreHistory = [];
             sendToDJ({ type: 'setGameMode', enabled: false, resetDefaults: true });
             gameMusicMode = false;
             document.getElementById('ipodPowerBtn').classList.remove('off');
@@ -3747,6 +3850,33 @@
                 ctx.fill();
             }
             ctx.restore();
+        }
+
+        // Cannonball splash effect — spawns blue/white burst at random water pixel
+        function spawnCannonballSplash() {
+            // Sample random water pixels on the current hole
+            let waterX = -1, waterY = -1;
+            for (let attempt = 0; attempt < 200; attempt++) {
+                const tx = Math.floor(Math.random() * CANVAS_WIDTH);
+                const ty = Math.floor(Math.random() * CANVAS_HEIGHT);
+                if (isWater(tx, ty)) { waterX = tx; waterY = ty; break; }
+            }
+            if (waterX < 0) return; // No water on this hole
+            const colors = ['#4488ff', '#66bbff', '#ffffff', '#88ccff', '#aaddff'];
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 3;
+                const baseLife = 40 + Math.floor(Math.random() * 30);
+                fireworkParticles.push({
+                    x: waterX, y: waterY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 2,
+                    life: baseLife, maxLife: baseLife,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: 2 + Math.random() * 2,
+                    gravity: 0.08
+                });
+            }
         }
 
         function drawBall() {
@@ -4741,18 +4871,92 @@
             flagFrozen = false; // Show stats now instead of flag
         }
 
-        // ==================== MP CHAT BOX (bottom-right of canvas) ====================
+        // ==================== SCORE TREND GRAPH (mini stock chart) ====================
+        function drawScoreGraph() {
+            if (scoreHistory.length < 1) return;
+            const GW = 80, GH = 30;
+            const GX = 8, GY = 195; // Below score panel area
+
+            // Compress if more than 9 points: average pairs of oldest
+            let data = scoreHistory.map(s => s.cumulative);
+            while (data.length > 9) {
+                const avg = (data[0] + data[1]) / 2;
+                data.splice(0, 2, avg);
+            }
+
+            const minVal = Math.min(0, ...data);
+            const maxVal = Math.max(0, ...data);
+            const range = Math.max(maxVal - minVal, 1);
+
+            // Background
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(GX, GY, GW, GH);
+
+            // Zero line
+            const zeroY = GY + GH - ((0 - minVal) / range) * GH;
+            ctx.strokeStyle = 'rgba(255,215,0,0.4)';
+            ctx.lineWidth = 0.5;
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(GX, zeroY);
+            ctx.lineTo(GX + GW, zeroY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Plot line segment by segment with color
+            const step = data.length > 1 ? GW / (data.length - 1) : GW;
+            for (let i = 0; i < data.length - 1; i++) {
+                const x1 = GX + i * step;
+                const x2 = GX + (i + 1) * step;
+                const y1 = GY + GH - ((data[i] - minVal) / range) * GH;
+                const y2 = GY + GH - ((data[i + 1] - minVal) / range) * GH;
+
+                // Green = under par (going down), red = over par (going up)
+                const color = data[i + 1] < data[i] ? '#44ff44' : data[i + 1] > data[i] ? '#ff4444' : '#ffaa00';
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                // Fill area between line and zero
+                ctx.fillStyle = data[i + 1] <= 0 && data[i] <= 0 ? 'rgba(68,255,68,0.15)' : 'rgba(255,68,68,0.15)';
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.lineTo(x2, zeroY);
+                ctx.lineTo(x1, zeroY);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Single dot if only one point
+            if (data.length === 1) {
+                const py = GY + GH - ((data[0] - minVal) / range) * GH;
+                ctx.fillStyle = data[0] <= 0 ? '#44ff44' : '#ff4444';
+                ctx.beginPath();
+                ctx.arc(GX + GW / 2, py, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // ==================== MP CHAT BOX (top-right of canvas) ====================
+        const CHAT_SIZE = 170;
+        const CHAT_X = CANVAS_WIDTH - 10 - CHAT_SIZE;
+        const CHAT_Y = 10;
         function drawMpChat() {
             if (!isMultiplayer) return;
             // Expire messages older than 10 seconds
             const now = Date.now();
             mpChatMessages = mpChatMessages.filter(m => now - m.time < 10000);
             if (mpChatMessages.length === 0) return;
+            if (!mpChatVisible) return;
 
-            const CHAT_SIZE = 170;  // Square box
             const LINE_H = 16;
-            const CHAT_X = CANVAS_WIDTH - 10 - CHAT_SIZE;
-            const CHAT_Y = CANVAS_HEIGHT - 10 - CHAT_SIZE;
 
             ctx.save();
             // Background
@@ -4763,7 +4967,13 @@
             ctx.lineWidth = 2;
             ctx.strokeRect(CHAT_X, CHAT_Y, CHAT_SIZE, CHAT_SIZE);
 
-            // Messages (draw from bottom up so newest are at bottom)
+            // Close "x" indicator top-right
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('x', CHAT_X + CHAT_SIZE - 6, CHAT_Y + 14);
+
+            // Messages (draw from top so newest are at bottom)
             ctx.fillStyle = '#000';
             ctx.font = '11px sans-serif';
             ctx.textAlign = 'left';
@@ -4824,6 +5034,45 @@
 
         // ==================== CAMERA ====================
         function updateCamera() {
+            // Strikers zoom override
+            if (strikerZoomActive) {
+                strikerZoomTimer++;
+                const gx = golfer.isFixed ? golfer.fixedX : ball.x;
+                const gy = golfer.isFixed ? golfer.fixedY : ball.y;
+
+                if (strikerZoomTimer <= STRIKER_CONTACT_FRAME) {
+                    // Zoom in to golfer
+                    cameraTargetZoom = STRIKER_ZOOM_LEVEL;
+                    cameraTargetX = gx;
+                    cameraTargetY = gy;
+                    const fastLerp = 0.15;
+                    cameraZoom += (cameraTargetZoom - cameraZoom) * fastLerp;
+                    cameraX += (cameraTargetX - cameraX) * fastLerp;
+                    cameraY += (cameraTargetY - cameraY) * fastLerp;
+                } else if (strikerZoomTimer === STRIKER_CONTACT_FRAME + 1) {
+                    // Contact frame — release ball + screen shake
+                    ball.vx = pendingVX;
+                    ball.vy = pendingVY;
+                    ballMoving = true;
+                    pendingVX = 0;
+                    pendingVY = 0;
+                } else if (strikerZoomTimer <= STRIKER_ZOOM_FRAMES) {
+                    // Zoom out — screen shake for first few frames after contact
+                    const shakeFrames = strikerZoomTimer - STRIKER_CONTACT_FRAME;
+                    if (shakeFrames <= 4) {
+                        cameraX += (Math.random() - 0.5) * 6;
+                        cameraY += (Math.random() - 0.5) * 6;
+                    }
+                    // Normal camera lerp resumes
+                    cameraZoom += (1.0 - cameraZoom) * CAMERA_LERP;
+                    cameraX += (ball.x - cameraX) * CAMERA_LERP;
+                    cameraY += (ball.y - cameraY) * CAMERA_LERP;
+                } else {
+                    strikerZoomActive = false;
+                }
+                return;
+            }
+
             const maxZoom = CLUB_ZOOM[selectedClub];
 
             // UI panel width (predictor + fun + swag meters + padding)
@@ -4854,10 +5103,6 @@
                 const midY = (ball.y + hy) / 2;
 
                 // Offset camera so the midpoint appears at the visible center (not canvas center)
-                // Screen position of a game point: screenX = (gx - cameraX) * zoom + CANVAS_WIDTH/2
-                // We want midX to appear at visCenterScreen:
-                // visCenterScreen = (midX - cameraX) * zoom + CANVAS_WIDTH/2
-                // cameraX = midX - (visCenterScreen - CANVAS_WIDTH/2) / zoom
                 const offsetX = (visCenterScreen - CANVAS_WIDTH / 2) / cameraTargetZoom;
                 cameraTargetX = midX - offsetX;
                 cameraTargetY = midY;
@@ -4935,6 +5180,7 @@
             drawFlagPreview();
             drawShotStats();
             drawMpChat();
+            drawScoreGraph();
 
             // Border area: predictor + fun meter + swag meter
             const borderX = PREDICTOR_X - 2;
@@ -5102,18 +5348,42 @@
         // Lobby name entry
         document.getElementById('mpNameConfirmBtn').addEventListener('click', mpSubmitName);
         document.getElementById('mpNameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') mpSubmitName(); });
+        document.getElementById('mpPasswordSubmit').addEventListener('click', mpPasswordCheck);
+        document.getElementById('mpPasswordInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') mpPasswordCheck(); });
 
         function mpSubmitName() {
             const name = document.getElementById('mpNameInput').value.trim().toUpperCase();
             if (!name) return;
+            if (RESERVED_NAMES.includes(name)) {
+                document.getElementById('mpNameConfirmBtn').style.display = 'none';
+                document.getElementById('mpPasswordRow').style.display = 'block';
+                document.getElementById('mpPasswordInput').focus();
+                document.getElementById('mpPasswordError').textContent = '';
+                return;
+            }
             playerName = name;
             loadPlayerData(name);
-            // Update main menu UI too
             document.getElementById('mainNameEntry').style.display = 'none';
             document.getElementById('playerInfo').style.display = 'block';
             updatePlayerUI();
             showMpLobbySection('mpLobbyBrowser');
             showMpLobbyBrowser();
+        }
+        function mpPasswordCheck() {
+            const pw = document.getElementById('mpPasswordInput').value;
+            if (pw === CREW_PASSWORD) {
+                playerName = document.getElementById('mpNameInput').value.trim().toUpperCase();
+                document.getElementById('mpPasswordRow').style.display = 'none';
+                document.getElementById('mpNameConfirmBtn').style.display = '';
+                loadPlayerData(playerName);
+                document.getElementById('mainNameEntry').style.display = 'none';
+                document.getElementById('playerInfo').style.display = 'block';
+                updatePlayerUI();
+                showMpLobbySection('mpLobbyBrowser');
+                showMpLobbyBrowser();
+            } else {
+                document.getElementById('mpPasswordError').textContent = 'Wrong password';
+            }
         }
 
         document.getElementById('mpNameBackBtn').addEventListener('click', () => {
@@ -5206,8 +5476,6 @@
             }).then(() => {
                 lobbyRef.child('players/' + myPlayerId + '/connected').onDisconnect().cancel();
                 lobbyRef.child('players/' + myPlayerId + '/connected').onDisconnect().set(false);
-                lobbyRef.child('status').onDisconnect().cancel();
-                lobbyRef.child('status').onDisconnect().set('closed');
                 showMpLobbyRoom();
             });
         }
@@ -5556,6 +5824,8 @@
                 const cx = cameraX + (Math.random() - 0.5) * (CANVAS_WIDTH / cameraZoom) * 0.4;
                 const cy = cameraY + (Math.random() - 0.5) * (CANVAS_HEIGHT / cameraZoom) * 0.3;
                 showPowerupFeedback(`${name}: ${r.text}`, cx, cy, 240, 'mp-reaction');
+                mpChatVisible = true; // Auto-reopen chat on new message
+                if (r.text === 'Cannonball') spawnCannonballSplash();
             });
             mpListeners.push({ ref: reactionRef, event: 'value' });
 
@@ -5637,10 +5907,44 @@
         document.querySelectorAll('.mp-reaction-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (!currentLobby) return;
+                const reaction = btn.dataset.reaction;
                 currentLobby.child('game/reaction').set({
-                    text: btn.dataset.reaction, from: mySlot, timestamp: Date.now()
+                    text: reaction, from: mySlot, timestamp: Date.now()
                 });
+                if (reaction === 'Cannonball') spawnCannonballSplash();
             });
+        });
+
+        // Secret shake-to-send "Fuck" reaction (hidden Easter egg)
+        let lastShakeTime = 0;
+        const SHAKE_THRESHOLD = 15;
+        const SHAKE_COOLDOWN = 3000;
+        // Request DeviceMotion permission on iOS
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission().catch(() => {});
+        }
+        window.addEventListener('devicemotion', (e) => {
+            if (!isMultiplayer || !currentLobby || isMyTurn) return;
+            const acc = e.accelerationIncludingGravity;
+            if (!acc) return;
+            const force = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
+            const now = Date.now();
+            if (force > SHAKE_THRESHOLD && now - lastShakeTime > SHAKE_COOLDOWN) {
+                lastShakeTime = now;
+                currentLobby.child('game/reaction').set({
+                    text: 'Fuck', from: mySlot, timestamp: now
+                });
+            }
+        });
+
+        // Visibility change — auto-reconnect when returning from background
+        document.addEventListener('visibilitychange', () => {
+            if (!isMultiplayer || !currentLobby || !myPlayerId) return;
+            if (document.hidden) return; // Only act on return to foreground
+            // Re-set connected and re-register onDisconnect
+            currentLobby.child('players/' + myPlayerId + '/connected').set(true);
+            currentLobby.child('players/' + myPlayerId + '/connected').onDisconnect().cancel();
+            currentLobby.child('players/' + myPlayerId + '/connected').onDisconnect().set(false);
         });
 
         // Shot replay
@@ -5660,8 +5964,8 @@
 
             // Apply their shot velocity
             const speed = shotData.speed || 0;
-            ball.vx = (shotData.dirX || 0) * speed;
-            ball.vy = (shotData.dirY || 0) * speed;
+            const replayVX = (shotData.dirX || 0) * speed;
+            const replayVY = (shotData.dirY || 0) * speed;
 
             // Set up bend
             shotTotalBendAngle = shotData.bendAngle || 0;
@@ -5675,7 +5979,31 @@
             selectedClub = shotData.club || 'driver';
             cameraTargetZoom = CLUB_ZOOM[selectedClub];
 
-            ballMoving = true;
+            // Strikers zoom for opponent driver shots
+            if (selectedClub === 'driver') {
+                pendingVX = replayVX;
+                pendingVY = replayVY;
+                strikerZoomActive = true;
+                strikerZoomTimer = 0;
+                ball.vx = 0;
+                ball.vy = 0;
+                ballMoving = false;
+                // Trigger swing animation at opponent's position
+                const shotAngle = Math.atan2(replayVY, replayVX);
+                const standAngle = shotAngle + Math.PI / 2;
+                golfer.fixedX = ball.x + Math.cos(standAngle) * 40;
+                golfer.fixedY = ball.y + Math.sin(standAngle) * 40;
+                golfer.isFixed = true;
+                golfer.facingAngle = shotAngle;
+                golfer.swingPhase = 'backswing';
+                golfer.swingAngle = 0;
+                golfer.swingTimer = 0;
+                golfer.isSwinging = true;
+            } else {
+                ball.vx = replayVX;
+                ball.vy = replayVY;
+                ballMoving = true;
+            }
             ballTrail = [];
             strokes = (mpPlayerStates[shotData.player] || {}).strokes || 0;
 
@@ -5972,19 +6300,29 @@
             if (!isMultiplayer || !currentLobby) return;
             const connected = Object.values(lobbyPlayers).filter(p => p.connected);
             const connectedSlots = connected.map(p => p.slot);
+            const now = Date.now();
 
-            // Remove disconnected slots from turn order
+            // Track when each slot disconnected (grace period)
             const disconnectedSlots = turnOrder.filter(s => !connectedSlots.includes(s));
-            if (disconnectedSlots.length === 0) return;
+            // Clear timestamps for reconnected players
+            connectedSlots.forEach(s => { delete disconnectedTimestamps[s]; });
+            // Record new disconnections
+            disconnectedSlots.forEach(s => {
+                if (!disconnectedTimestamps[s]) disconnectedTimestamps[s] = now;
+            });
 
-            const newTurnOrder = turnOrder.filter(s => connectedSlots.includes(s));
+            // Only remove players who have been disconnected longer than grace period
+            const expiredSlots = disconnectedSlots.filter(s => now - disconnectedTimestamps[s] > DISCONNECT_GRACE_MS);
+            if (expiredSlots.length === 0) return;
+
+            const newTurnOrder = turnOrder.filter(s => !expiredSlots.includes(s));
             if (newTurnOrder.length < 1) return;
 
             // Only host handles cleanup
             if (mySlot === 'p1') {
                 const currentTurnSlot = turnOrder[currentTurnIndex];
                 let newTurn = currentTurnSlot;
-                if (disconnectedSlots.includes(currentTurnSlot)) {
+                if (expiredSlots.includes(currentTurnSlot)) {
                     newTurn = newTurnOrder[0] || turnOrder[0];
                 }
 
@@ -5995,6 +6333,7 @@
                 });
             }
             turnOrder = newTurnOrder;
+            expiredSlots.forEach(s => { delete disconnectedTimestamps[s]; });
         }
 
         // Cleanup

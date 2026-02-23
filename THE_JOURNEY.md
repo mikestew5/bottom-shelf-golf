@@ -280,6 +280,84 @@ You mapped out an 8-week learning path:
 
 ---
 
+## Chapter 7: First Collaboration (The Multiplayer Update)
+
+This is where it stopped being a solo project.
+
+Riley came on board — the first collaborator on Bottom Shelf Games. Not just playing the games, not just giving feedback, but actually **pushing code to the repo**. Real teamwork. Real branches. Real pull requests.
+
+### The Onboarding
+
+You wrote a full GitHub setup guide (`BS_Games_Github_employee_setup.md`) — a step-by-step walkthrough for someone who'd never touched Git before. Account creation, accepting repo invites, cloning, branching, staging, committing, pushing, opening PRs. The whole workflow, plain English, no jargon without explanation.
+
+Then you set up branch protection on `main` — require a PR and approval before anything merges. No cowboy commits to production. Real engineering practice from day one.
+
+### Riley's Masks
+
+The big technical feature: **mask-based terrain detection**. Instead of the game trying to guess terrain types by reading pixel colors from the course images (fragile, breaks when art changes), Riley hand-painted dedicated mask images for each hole.
+
+Each mask uses a simple color code:
+- **Red** = Trees/obstacles
+- **Blue** = Water hazards
+- **White** = Out of bounds
+- **Green** = Fairway (playable)
+- **Light green** = Putting green
+- **Yellow** = Sand traps
+
+The code reads the mask at each pixel position and knows exactly what terrain the ball is on. If no mask exists for a hole, it falls back to the old pixel-detection method. Both course images and masks get scaled to the 600x800 canvas automatically — no dimension issues.
+
+Riley updated masks and course images for holes 1-4 and 18 across multiple pushes to the feature branch.
+
+### The How to Play Rewrite
+
+Riley also rewrote the entire How to Play overlay — injecting actual personality into what had been dry instructional text:
+
+> *"Tap and hold the ball to start aiming (you ever played a phone game before?!)"*
+> *"Drinking Beer is Fun! Fun = wobble."*
+> *"We have a bad words filter so don't even try it, we don't consider dick and balls to be bad words"*
+> *In the wise words of Riley: "I'm having fun"*
+
+Seven new sections: Listen to our Music, Drive the damn ball, Clubs, Iron and Putter Use Drag Distance, Fun Controllers, BS Coins, and Wind. The voice of the game finally sounds like the people who made it.
+
+### The Branch Workflow in Action
+
+This was the first real test of the collaborative Git workflow:
+
+```
+main (protected)
+  └── feature/mask-terrain-detection
+        ├── 21c613a  Add mask-based terrain detection with pixel fallback
+        ├── 5e80dc7  Update course images (Riley)
+        ├── 55446c2  Update course images (Riley)
+        ├── 6547ee8  Update mask images (Riley)
+        └── 43fe997  Update How to Play, disable tutorial temporarily
+```
+
+Riley pushed his image updates. Mike pushed the code changes. When they collided (remote had new work), `git pull --rebase` cleanly stacked the commits. No conflicts. No lost work. The branch protection, the PR workflow, the separation of concerns — it all worked exactly as designed.
+
+**PR #2:** [Mask terrain detection + updated How to Play](https://github.com/mikestew5/bottom-shelf-golf/pull/2) — 5 commits, 13 files changed, 333 insertions.
+
+### New Skills Unlocked
+
+| Skill | What Happened |
+|-------|--------------|
+| **Collaborative Git workflow** | First time working on the same repo with another person. Branching, pushing, rebasing, PRs. |
+| **Branch protection** | Set up `main` to require PR + approval. No direct pushes to production. |
+| **Pull requests** | Created and managed PR #2 — proper title, description, test plan. |
+| **Rebasing** | Handled remote changes from Riley with `git pull --rebase` — clean commit history. |
+| **Code review process** | Verified feature branch contents before merging. Checked image compatibility, terrain detection wiring. |
+| **Onboarding documentation** | Wrote a complete setup guide for a new contributor from scratch. |
+| **Feature branches** | Worked on `feature/mask-terrain-detection` without touching `main` until ready. |
+| **Mask-based collision** | Implemented a proper terrain detection system with color-coded masks and pixel fallback. |
+
+### The Vibe
+
+This is the moment it went from "Mike's project" to "our project." Riley's voice is literally in the game now. His art is driving the terrain system. The repo has multiple contributors. There's a PR open. There's a workflow.
+
+Bottom Shelf Games has a team.
+
+---
+
 ## Where You Are Now
 
 ```
@@ -296,6 +374,9 @@ bottomshelfgames.net ─── Cargo (website)
 - DJ Stand / Big Stupid Music Machine — playable music player
 
 **What's next:**
+- Merge PR #2 (mask terrain detection + How to Play rewrite)
+- Rework the hole 1 tutorial (temporarily disabled)
+- Add masks for remaining holes (5-17)
 - Deploy Pool to GitHub Pages
 - Deploy Fishing to GitHub Pages
 - Add sound effects to all games

@@ -2977,9 +2977,17 @@
                 const gdy = currentHole.holePos.y - ball.y;
                 const gDist = Math.sqrt(gdx * gdx + gdy * gdy);
                 if (gDist > 0 && gDist < GRAVITY_RADIUS) {
-                    const pullStrength = HOLE_GRAVITY * (1 - gDist / GRAVITY_RADIUS);
-                    ball.vx += (gdx / gDist) * pullStrength;
-                    ball.vy += (gdy / gDist) * pullStrength;
+                    if (gDist < holeRadius) {
+                        // Ball is in the cup — snap to center and stop
+                        ball.x = currentHole.holePos.x;
+                        ball.y = currentHole.holePos.y;
+                        ball.vx = 0;
+                        ball.vy = 0;
+                    } else {
+                        const pullStrength = HOLE_GRAVITY * (1 - gDist / GRAVITY_RADIUS);
+                        ball.vx += (gdx / gDist) * pullStrength;
+                        ball.vy += (gdy / gDist) * pullStrength;
+                    }
                 }
             }
 

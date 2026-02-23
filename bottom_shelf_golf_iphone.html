@@ -2464,8 +2464,8 @@
             // Screen coords for UI hit testing
             const { x: sx, y: sy } = screenCoords(e);
 
-            // Check if clicking on predictor window, fun meter, or swag meter area (hidden for putter)
-            if (selectedClub !== 'putter' && sx >= PREDICTOR_X && sx <= SWAG_X + SWAG_W && sy >= PREDICTOR_Y && sy <= PREDICTOR_Y + PREDICTOR_H) {
+            // Check if clicking on predictor window, fun meter, or swag meter area
+            if (sx >= PREDICTOR_X && sx <= SWAG_X + SWAG_W && sy >= PREDICTOR_Y && sy <= PREDICTOR_Y + PREDICTOR_H) {
                 isDraggingMeter = true;
                 meterPower = Math.max(0, Math.min(1, 1 - (sy - FUN_Y) / FUN_H));
                 return;
@@ -4532,7 +4532,6 @@
         const SWAG_H = FUN_H;
 
         function drawFunMeter() {
-            if (selectedClub === 'putter') return;
             ctx.save();
 
             // Background
@@ -4656,7 +4655,6 @@
         }
 
         function drawPredictorPath() {
-            if (selectedClub === 'putter') return;
             const points = ballMoving ? frozenPredictorPoints : computePredictorPoints();
             if (!points) return;
 
@@ -4696,7 +4694,7 @@
             if (shotSummaryMessages.length === 0 && displayBeers === 0 && displayCigs === 0) return;
 
             const BOX_W = PREDICTOR_W;
-            const BOX_H = PREDICTOR_Y - 20; // Fill space above predictor
+            const BOX_H = isMultiplayer ? 120 : (PREDICTOR_Y - 20); // Compact in MP to respect chat/reactions
             const BOX_X = PREDICTOR_X;
             const BOX_Y = 10;
 

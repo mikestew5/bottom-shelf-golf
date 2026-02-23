@@ -1325,7 +1325,7 @@
 
         // Realistic stat constants
         const CLUB_AIR_TIME = { driver: 6.0, iron: 4.5, putter: 0 };
-        const MPH_PER_PX_FRAME = 30.22;  // 170 mph / 5.625 px/frame (full power driver)
+        const MPH_PER_PX_FRAME = 30.22;  // Display scaling factor for speed stats
         const PAR4_HOLE_FT = 650;          // Tuned tee-to-hole distance for realistic shot stats
 
         // Beer/cig images for summary box
@@ -6001,6 +6001,7 @@
                 const turnSlot = snap.val();
                 const wasMyTurn = isMyTurn;
                 isMyTurn = (turnSlot === mySlot);
+                currentTurnIndex = turnOrder.indexOf(turnSlot);
                 if (isMyTurn && !wasMyTurn) {
                     mpTurnOverlayVisible = true;
                 }
@@ -6340,7 +6341,7 @@
             const hx = currentHole.holePos.x;
             const hy = currentHole.holePos.y;
             const dist = Math.sqrt((ball.x - hx) ** 2 + (ball.y - hy) ** 2);
-            const holedOut = dist < 19; // holeRadius
+            const holedOut = dist < holeRadius;
 
             // Sync ball position
             currentLobby.child('game/balls/' + mySlot).set({
